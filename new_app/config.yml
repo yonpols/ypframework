@@ -1,0 +1,72 @@
+package:
+  type: application
+  name: sample-application
+  version: 0.0.0
+  author: 'Name of the author'
+  description: 'Text of description'
+  dependencies:
+    framework:
+      ypf: '>=0.1.0'
+    plugins:
+      captcha: '0.0.1'
+    lib:
+
+paths:
+  db: '{%paths.app}/db'
+
+#To force execution mode uncomment this line and change it to the correct value
+#mode: development
+
+plugins:
+  development:
+
+  production:
+    sesion_db:
+      version: '1.0' # >1.0 ó >= 1.0
+      #path:
+      #git:
+    captcha: '1.0'
+
+application:
+  development:
+    title: 'YPFramework'
+    url: 'http://localhost/~yonpols/dev/ypf'
+    root: '/home'
+    pack_media: true
+    pretty_url: true
+    profile: true
+
+  production:
+    title: 'YPFramework'
+    url: 'http://10.200.0.7/~yonpols/dev/ypf'
+    root: '/home'
+    pack_media: false
+    pretty_url: true
+    profile: true
+
+    minify_output: true
+
+routes:
+  home:
+    match: '/home(.:format)'
+    controller: 'home'
+    action: 'index'
+    method: 'get'
+
+#  noaction:
+#    match: '/:controller(.:format)'
+#    action: 'index'
+
+#  default:
+#    match: '/(:controller(/:action(/:id)))(.:format)'
+
+databases:
+  #One database configuration for each application mode
+  development:
+    type: SQLite2
+    name: '{%paths.db}/development.db'
+
+  production:
+    type: SQLite2
+    name: '{%paths.db}/production.db'
+

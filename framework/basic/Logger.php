@@ -1,0 +1,103 @@
+<?php
+    class Logger extends Object implements Initializable
+    {
+        private static $frameworkLog = array();
+        private static $frameworkLogFileName = null;
+        private static $applicationLog = array();
+        private static $applicationLogFileName = null;
+        private static $mode;
+
+        private static $excludes = array(
+            'development' => array(),
+            'production' => array(
+                'SQL', 'DEBUG'
+            )
+        );
+
+        private static $colors = array('ERROR' => 31, 'INFO' => 32, 'NOTICE' => 33, 'DEBUG' => 36, 'ROUTE' => 34, 'SQL' => 35);
+
+        public static function initialize()
+        {
+            $basePath = YPFramework::getConfiguration()->paths->log;
+            self::$mode = YPFramework::getMode();
+
+            self::$frameworkLogFileName = YPFramework::getFileName($basePath, sprintf('ypf-%s-%s.log', self::$mode, date('Y-m')));
+            self::$applicationLogFileName = YPFramework::getFileName($basePath, sprintf('app-%s-%s.log', self::$mode, date('Y-m')));
+
+            if (count(self::$frameworkLog))
+            {
+                $fd = fopen(self::$frameworkLogFileName, "a");
+                foreach(self::$frameworkLog as $log)
+                    fwrite($fd, $log);
+                fclose($fd);
+                self::$frameworkLog = array();
+            }
+
+            if (count(self::$applicationLog))
+            {
+                $fd = fopen(self::$applicationLogFileName, "a");
+                foreach(self::$applicationLog as $log)
+                    fwrite($fd, $log);
+                fclose($fd);
+                self::$applicationLog = array();
+            }
+        }
+
+        public static function finalize() { }
+
+        public static function framework($type, $log)
+        {
+            if (strpos($type, ':') !== false)
+                list($type, $subtype) = explode(':', $type);
+            else
+                $subtype = 'LOG';
+
+            if (self::isExcluded($type))
+                return;
+
+            $text = sprintf("[%s] \x1B[1;%d;1m%s:%s\x1B[0;0;0m %s\n", strftime('%F %T'), self::getColor($type), $type, $subtype, $log);
+
+            if (self::$frameworkLogFileName)
+            {
+                $fd = fopen(self::$frameworkLogFileName, "a");
+                fwrite($fd, $text);
+                fclose($fd);
+            } else
+                self::$frameworkLog[] = $text;
+        }
+
+        public static function application($type, $log)
+        {
+            if (strpos($type, ':') !== false)
+                list($type, $subtype) = explode(':', $type);
+            else
+                $subtype = 'LOG';
+
+            if (self::isExcluded($type))
+                return;
+
+            $text = sprintf("[%s] \x1B[1;%d;1m%s:%s\x1B[0;0;0m %s\n", strftime('%F %T'), self::getColor($type), $type, $subtype, $log);
+
+            if (self::$applicationLogFileName)
+            {
+                $fd = fopen(self::$applicationLogFileName, "a");
+                fwrite($fd, $text);
+                fclose($fd);
+            } else
+                self::$applicationLog[] = $text;
+        }
+
+        private static function getColor($type)
+        {
+            if (isset(self::$colors[$type]))
+                return self::$colors[$type];
+            else
+                return 0;
+        }
+
+        private static function isExcluded($type)
+        {
+            return (isset(self::$excludes[self::$mode]) && (array_search($type, self::$excludes[self::$mode]) !== false));
+        }
+    }
+?>

@@ -1,0 +1,12 @@
+routes:
+  ypf_html_packed_css:
+    match: '/css/ypf_packed'
+    controller: 'ypf_media'
+    action: 'css'
+    method: 'get'
+
+  ypf_html_packed_js:
+    match: '/js/ypf_packed'
+    controller: 'ypf_media'
+    action: 'js'
+    method: 'get'
