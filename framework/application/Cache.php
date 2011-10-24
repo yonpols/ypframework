@@ -27,12 +27,12 @@
             }
         }
 
-        public static function fileBased($fileName, $value = null) {
+        public static function fileBased($fileName, $value = null, $serialize = true) {
             $cache_file = YPFramework::getFileName(self::$fileBased, md5($fileName)."-".basename($fileName));
 
             if ($value !== null)
             {
-                $value = serialize($value);
+                if ($serialize) $value = serialize($value);
                 file_put_contents($cache_file, $value);
                 Logger::framework('INFO:CACHE', "$fileName loaded to cache: $cache_file");
             } else {
@@ -40,8 +40,10 @@
                     return false;
                 elseif (filemtime($fileName) > filemtime($cache_file))
                     return false;
-                else
+                elseif ($serialize)
                     return unserialize (file_get_contents($cache_file));
+                else
+                    return file_get_contents($cache_file);
             }
         }
     }

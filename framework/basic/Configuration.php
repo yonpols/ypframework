@@ -21,6 +21,7 @@
             try
             {
                 $config = $yaml->parse(file_get_contents($configFileName));
+                unset($config['package']);
 
                 foreach ($config as $name=>$value)
                     $this->mergeConfig ($this->root, $name, $this->objetize($value));
@@ -68,8 +69,7 @@
                 {
                     foreach($config as $key => $value)
                         $this->mergeConfig ($parent->{$name}, $key, $value, $path.$name.'.');
-                } else
-                    Logger::framework('INFO', sprintf('Duplicated config key: %s', $path.$name));
+                }
             }
         }
 

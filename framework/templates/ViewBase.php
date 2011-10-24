@@ -15,6 +15,16 @@
         protected static $_beforeFilter = array();
         protected static $_afterFilter = array();
 
+        public static function getContentType($fileName) {
+            if (function_exists('finfo_open')) {
+                $fid = finfo_open(FILEINFO_MIME_TYPE);
+                $type = finfo_file($fid, $fileName);
+                finfo_close($fid);
+                return $type;
+            } else
+                return mime_content_type($fileName);
+        }
+
         public function __construct(Application $application, $viewData = null, $viewProfile = null)
         {
             parent::__construct();
@@ -83,13 +93,7 @@
             if (!file_exists($this->compiledFileName) || filemtime($this->compiledFileName) <= filemtime($this->templateFileName))
                 $this->compile($viewName, $this->templateFileName, $this->compiledFileName);
 
-            if (function_exists('finfo_open'))
-            {
-                $fid = finfo_open(FILEINFO_MIME_TYPE);
-                $this->outputType = finfo_file($fid, $this->compiledFileName);
-            } else {
-                $this->outputType = mime_content_type($this->compiledFileName);
-            }
+            $this->outputType = self::getContentType($this->compiledFileName);
 
             $className = get_class($this);
             foreach($className::$_beforeFilter as $proc)

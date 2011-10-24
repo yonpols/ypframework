@@ -2,6 +2,9 @@
     class Object
     {
         private static $__mixin_included = null;
+        private static $__object_ids = 0;
+
+        private $id = null;
 
         public static function __include($className)
         {
@@ -85,6 +88,13 @@
             } while (($baseName = get_parent_class($baseName)));
 
             throw new BaseError(sprintf('No method defined for: %s->%s', $baseName, $name));
+        }
+
+        public function getObjectId() {
+            if ($this->id === null)
+                $this->id = sprintf("%x", time()+(self::$__object_ids++));
+
+            return $this->id;
         }
 
         public function __toString()

@@ -114,9 +114,9 @@
 
         $html .= '</select>';
 
-        if (is_object($object) && ($object instanceof Model) && $object->getError($name))
+        if (is_object($object) && ($object instanceof Model) && $object->getError($id['field']))
             $html .= sprintf('<span class="error"><ul><li>%s</li></ul></span>',
-                implode('</li><li>', $object->getError($name)));
+                implode('</li><li>', $object->getError($id['field'])));
 
         return $html;
     }
@@ -136,9 +136,9 @@
 
         $html .= '</textarea>';
 
-        if (is_object($object) && ($object instanceof Model) && $object->getError($name))
+        if (is_object($object) && ($object instanceof Model) && $object->getError($id['field']))
             $html .= sprintf('<span class="error"><ul><li>%s</li></ul></span>',
-                implode('</li><li>', $object->getError($name)));
+                implode('</li><li>', $object->getError($id['field'])));
 
         return $html;
     }
@@ -164,10 +164,10 @@
     {
         $id = _form_fieldname($name, $object, $value, ($type=='text'));
 
-        if (is_object($object) && ($object instanceof Model) && $object->getError($name))
+        if (is_object($object) && ($object instanceof Model) && $object->getError($id['field']))
         {
             $errors = sprintf('<span class="error"><ul><li>%s</li></ul></span>',
-                implode('</li><li>', $object->getError($name)));
+                implode('</li><li>', $object->getError($id['field'])));
             $attrs['class'] = (isset($attrs['class'])? $attrs['class']: '').' error';
         } else
             $errors = '';
@@ -188,27 +188,56 @@
 
     function _form_fieldname($name, $object = null, &$value = null, $get_string=false)
     {
-        if (is_object($object))
-        {
-            if (isset ($object->{$name}))
-            {
-                if ($value === null) $value = $object->{$name};
-                if ($value instanceof Model)
-                    if ($get_string)
-                        $value = $value->__toString();
-                    else
-                        $value = $value->getSerializedKey();
+        if (preg_match('/^[a-zA-Z0-9_]+(\\.[a-zA-Z0-9_]+)+(\\.\\*\\.[a-zA-Z0-9_]+)?$/', $name)) {
+            if (is_object($object)) {
+                if ($object instanceof Model) {
+                    $key = $object->getSerializedKey();
+                    if ($key === null)
+                        $key = $object->getObjectId();
+                    $name = str_replace('*', $key, $name);
+                }
+
+                $name = explode('.', $name);
+                $field = $name[count($name)-1];
+
+                if (isset ($object->{$field}))
+                {
+                    if ($value === null) $value = $object->{$field};
+                    if ($value instanceof Model)
+                        if ($get_string)
+                            $value = $value->__toString();
+                        else
+                            $value = $value->getSerializedKey();
+                }
             }
 
-            $id = sprintf('%s_%s', get_class($object), $name);
-            $name = sprintf('%s[%s]', get_class($object), $name);
-        } else
-        {
-            if ($value === null) $value = $object;
-            $id = $name;
+            $id = implode('_', $name);
+            $name = $name[0].'['.implode('][', array_slice($name, 1)).']';
+        } else {
+            if (is_object($object))
+            {
+                $field = $name;
+                if (isset ($object->{$name}))
+                {
+                    if ($value === null) $value = $object->{$name};
+                    if ($value instanceof Model)
+                        if ($get_string)
+                            $value = $value->__toString();
+                        else
+                            $value = $value->getSerializedKey();
+                }
+
+                $id = sprintf('%s_%s', get_class($object), $name);
+                $name = sprintf('%s[%s]', get_class($object), $name);
+            } else
+            {
+                if ($value === null) $value = $object;
+                $id = $name;
+                $field = $name;
+            }
         }
 
-        return array('id' => $id, 'name' => $name);
+        return array('id' => $id, 'name' => $name, 'field' => $field);
     }
 
     function form_process_uploaded_file($model, $field, $path)

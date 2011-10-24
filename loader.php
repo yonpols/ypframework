@@ -3,11 +3,11 @@
 
     //Check for PHP version
     if ((!defined('PHP_VERSION_ID')) || PHP_VERSION_ID < 50300)
-        include(YPF_PATH.'/app/errors/php_version.php');
+        include(YPF_PATH.'/errors/php_version.php');
 
     //Check for WWW_PATH
     if (!defined('WWW_PATH'))
-        include(YPF_PATH.'/app/errors/no_www_path.php');
+        include(YPF_PATH.'/errors/no_www_path.php');
 
     ob_start();
     require_once YPF_PATH.'/framework/functions.php';
@@ -33,6 +33,10 @@
     require_once YPF_PATH.'/framework/records/IModelQuery.php';
     require_once YPF_PATH.'/framework/records/ModelQuery.php';
     require_once YPF_PATH.'/framework/records/ModelBaseRelation.php';
+    require_once YPF_PATH.'/framework/records/BelongsToRelation.php';
+    require_once YPF_PATH.'/framework/records/HasOneRelation.php';
+    require_once YPF_PATH.'/framework/records/HasManyRelation.php';
+    require_once YPF_PATH.'/framework/records/HasManyThroughRelation.php';
     require_once YPF_PATH.'/framework/records/ModelBase.php';
 
     //Load base clases
@@ -42,11 +46,11 @@
     require_once APP_PATH.'/base/View.php';
 
     //Load libs
-    require_once YPF_PATH.'/lib/sfYaml/sfYamlParser.php';
+    require_once YPF_PATH.'/libs/sfYaml/sfYamlParser.php';
 
     set_include_path(get_include_path().
-                        PATH_SEPARATOR.realpath(YPF_PATH.'/lib').
-                        PATH_SEPARATOR.realpath(APP_PATH.'/lib'));
+                        PATH_SEPARATOR.realpath(YPF_PATH.'/libs').
+                        PATH_SEPARATOR.realpath(APP_PATH.'/libs'));
 
     YPFramework::initialize();
 ?>

@@ -119,6 +119,18 @@
                 return false;
 		}
 
+        public function begin() {
+            return $this->command('BEGIN');
+        }
+
+        public function commit() {
+            return $this->command('COMMIT');
+        }
+
+        public function rollback() {
+            return $this->command('ROLLBACK');
+        }
+
         public function getTableFields($table)
         {
             $fields = array();

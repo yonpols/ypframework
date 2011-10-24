@@ -198,12 +198,8 @@
             }
             elseif (isset($this->_modelParams->relations[$name]))
             {
-                $model = $this->_modelName;
-
-                if (!isset($this->_modelParams->relationObjects->{$name}))
-                    $this->_modelParams->relationObjects->{$name} = new ModelBaseRelation($this->_modelName, $name, $this->_modelParams->relations[$name]);
-
-                $this->_modelParams->relationObjects->{$name}->set($this, $value);
+                $relation = $this->getRelationObject($name);
+                $relation->set($this, $value);
             }
             elseif (array_key_exists($name, $this->_modelParams->transientFields))
                 $this->_modelData[$name] = $value;
@@ -288,6 +284,9 @@
             if (!$this->isValid())
                 return false;
 
+            //Start transaction
+            $model::$database->begin();
+
             $fieldNames = array_keys($this->_modelParams->tableMetaData);
             if ($this->isNew())
             {
@@ -320,10 +319,24 @@
                 $result = $model::$database->command($sql);
             }
 
-            if ($result === true)
-            {
+            if ($result === false) {
+                $model::$database->rollback();
+                return false;
+            } else {
                 $this->_modelModified = false;
                 $this->_modelFieldModified = array_fill_keys($fieldNames, false);
+
+                foreach ($this->_modelParams->relations as $name=>$relation) {
+                    $relation = $this->getRelationObject($name);
+
+                    if ($relation instanceof HasManyRelation) {
+                        $relation = $relation->get($this);
+                        if (!$relation->save()) {
+                            $model::$database->rollback();
+                            return false;
+                        }
+                    }
+                }
 
                 $result = true;
                 foreach($this->_modelParams->afterSave as $function)
@@ -332,15 +345,20 @@
                         if (call_user_func(array($this, $function)) === false)
                             $result = false;
                     }
-                    else
+                    else {
+                        $model::$database->rollback();
                         throw new ErrorNoCallback(get_class($this), $function);
+                    }
 
 
-                if (!$result)
+                if (!$result) {
+                    $model::$database->rollback();
                     return false;
+                }
             }
 
-            return $result;
+            $model::$database->commit();
+            return true;
         }
 
         public function delete()
@@ -358,6 +376,7 @@
             if (!$result)
                 return false;
 
+            $model::$database->begin();
             $sql = sprintf("DELETE FROM %s WHERE %s",
                 $this->_modelParams->tableName, implode(' AND ', $this->getSQlIdConditions(false)));
 
@@ -370,9 +389,12 @@
                     if (call_user_func(array($this, $function)) === false)
                         $result = false;
                 }
-                else
+                else {
+                    $model::$database->rollback();
                     throw new ErrorNoCallback(get_class($this), $function);
+                }
 
+            $model::$database->commit();
             return $result;
         }
 
@@ -518,7 +540,7 @@
                 if (!isset($this->_modelParams->relationObjects->{$name}))
                 {
                     $model = $this->_modelName;
-                    $this->_modelParams->relationObjects->{$name} = new ModelBaseRelation($this->_modelName, $name, $this->_modelParams->relations[$name]);
+                    $this->_modelParams->relationObjects->{$name} = ModelBaseRelation::getFor($this->_modelName, $name, $this->_modelParams->relations[$name]);
                 }
 
                 return $this->_modelParams->relationObjects->{$name};
@@ -527,7 +549,7 @@
             return null;
         }
 
-        protected static function getFieldSQLRepresentation($field, $value, $modelParams, $rawData = false)
+        public static function getFieldSQLRepresentation($field, $value, $modelParams, $rawData = false)
         {
             if (!array_key_exists($field, $modelParams->tableMetaData))
                 $type = 'string';
@@ -614,6 +636,7 @@
         protected function validate_relation($field, $parameters)
         {
             $value = $this->__get($field);
+            $valid = true;
 
             if (is_null($value))
                 return true;

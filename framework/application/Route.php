@@ -50,6 +50,7 @@
             $rule = preg_replace(array('/\\//', '/\\)/', '/\\./'), array('\\\\/', ')?', '\\\\.'), $rule);
             //Encerramos parámetros
             $rule = preg_replace('/(:[a-zA-Z][a-zA-Z0-9_]*)/', '($1)', $rule);
+            $rule = preg_replace('/(\\$[a-zA-Z][a-zA-Z0-9_]*)/', '($1)', $rule);
 
             $position = 0;
             $this->replaces = array();
@@ -65,11 +66,21 @@
                         if ($matches[0][1] == $i)
                             $this->replaces[$position] = $matches[0][0];
                     }
+
+                    if (preg_match('/\\(\\$[a-zA-Z][a-zA-Z0-9_]*\\)/', $rule, $matches, PREG_OFFSET_CAPTURE, $i))
+                    {
+                        if ($matches[0][1] == $i)
+                            $this->replaces[$position] = $matches[0][0];
+                    }
                 }
             }
 
-            foreach ($this->replaces as $level=>$replace)
-                $rule = str_replace ($replace, '([^(\\/\\.)]+)', $rule);
+            foreach ($this->replaces as $level=>$replace) {
+                if ($replace[1] == ':')
+                    $rule = str_replace ($replace, '([^(\\/\\.)]+)', $rule);
+                elseif ($replace[1] == '$')
+                    $rule = str_replace ($replace, '(.+)', $rule);
+            }
             $this->pattern = '/^'.$rule.'$/';
             $this->config = $config;
             $this->config->name = $name;

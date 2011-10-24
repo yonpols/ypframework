@@ -3,7 +3,6 @@
     {
         //Base paths for components: controllers, models, views, filters, helpers
         private static $applicationComponentPaths;
-        private static $applicationWebPaths;
 
         //Base paths of loaded plugins
         private static $plugins;
@@ -13,6 +12,8 @@
 
         //Connected databases
         private static $databases = array();
+
+        private static $application = null;
 
         //Working mode
         private static $mode = null;
@@ -53,11 +54,8 @@
 
             //Set up searching paths
             self::$applicationComponentPaths = array(
-                $root->paths->app,
-                self::getFileName($root->paths->ypf, 'app')
+                $root->paths->app
             );
-
-            self::registerWebPath($root->paths->www);
 
             //Determine working mode
             if (!isset($root->mode))
@@ -93,7 +91,8 @@
             }
 
             //Load application plugins
-            self::loadPlugins(isset($root->plugins)? $root->plugins->{self::$mode}: null);
+            self::loadPlugins(isset($root->{self::$mode}->plugins)? $root->{self::$mode}->plugins: null);
+            self::$applicationComponentPaths[] = $root->paths->ypf;
 
             //Load framework, application and plugins helpers
             self::loadHelpers();
@@ -111,8 +110,8 @@
         {
             try
             {
-                $application = new Application();
-                $application->run($main);
+                self::$application = new Application();
+                self::$application->run($main);
                 self::finalize();
             }
             catch (Exception $e)
@@ -126,11 +125,6 @@
                 //header($_SERVER['SERVER_PROTOCOL'] . ' 500 Internal Server Error', true, 500);
                 echo $e->getMessage();
             }
-        }
-
-        public static function registerWebPath($path)
-        {
-            self::$applicationWebPaths[] = $path;
         }
 
         public static function installDatabase()
@@ -220,6 +214,11 @@
             return self::$production;
         }
 
+        public static function getApplication()
+        {
+            return self::$application;
+        }
+
         public static function getConfiguration()
         {
             return self::$configuration->getRoot();
@@ -268,21 +267,37 @@
             return self::getComponentPath(self::underscore($className).'.php', self::getFileName($prefixPath, $type));
         }
 
-        public static function getComponentPath($baseName, $prefixPath = '', $useGlob=false)
+        public static function getComponentPath($baseName, $prefixPath = '', $useGlob=false, $allPaths=false)
         {
+            $result = array();
+
             foreach (self::$applicationComponentPaths as $path)
             {
                 $fileName = self::getFileName($path, $prefixPath, $baseName);
+
                 if ($useGlob)
                 {
                     $files = glob($fileName);
-                    if (count($files))
-                        return $files;
-                } else
-                    if (is_file($fileName)) return $fileName;
+
+                    if (is_array($files))
+                        $result = array_merge ($result, $files);
+
+                    if (count($files) && !$allPaths)
+                        break;
+
+                } elseif (is_file($fileName)) {
+                    $result[] = $fileName;
+                    if (!$allPaths)
+                        break;
+                }
             }
 
-            return false;
+            if (empty($result))
+                return false;
+            elseif ((count($result) == 1) && !$useGlob)
+                return array_pop($result);
+            else
+                return $result;
         }
 
         public static function underscore($string)
@@ -350,36 +365,42 @@
 
         //======================================================================
 
-        private static function loadPlugins($otherPlugins = null)
+        private static function loadPlugins($selectPlugins = null)
         {
             self::$plugins = array();
-
-            /* Los plugins de YPFramework deben ser especificados
-            $basePath = realpath(self::getFileName(self::$applicationComponentPaths[1], 'plugins'));
-            if (is_dir($basePath))
-            {
-                $od = opendir($basePath);
-                while ($dir = readdir($od))
-                {
-                    $path = self::getFileName($basePath, $dir);
-
-                    if (!is_dir($path))
-                        continue;
-                    if ($dir[0] =='.')
-                        continue;
-
-                    self::loadPlugin($dir, $path);
-                }
-            }
-            */
-            
             $basePath = realpath(self::getFileName(self::$applicationComponentPaths[0], 'plugins'));
-            if (is_dir($basePath))
+            $ypfPath = realpath(self::getFileName(self::$configuration->getRoot()->paths->ypf, 'plugins'));
+
+            if ($selectPlugins !== null) {
+                foreach ($selectPlugins as $plugin)
+                    if (!self::loadPlugin ($plugin, getFileName($basePath, $plugin)))
+                        Logger::framework ('ERROR', sprintf("Could not load plugin: %s", $plugin));
+            } else {
+                $basePath = realpath(self::getFileName(self::$applicationComponentPaths[0], 'plugins'));
+                if (is_dir($basePath))
+                {
+                    $od = opendir($basePath);
+                    while ($dir = readdir($od))
+                    {
+                        $path = self::getFileName($basePath, $dir);
+
+                        if (!is_dir($path))
+                            continue;
+                        if ($dir[0] =='.')
+                            continue;
+
+                        self::loadPlugin($dir, $path);
+                    }
+                    closedir($od);
+                }
+            }
+
+            if (is_dir($ypfPath))
             {
-                $od = opendir($basePath);
+                $od = opendir($ypfPath);
                 while ($dir = readdir($od))
                 {
-                    $path = self::getFileName($basePath, $dir);
+                    $path = self::getFileName($ypfPath, $dir);
 
                     if (!is_dir($path))
                         continue;
@@ -388,17 +409,7 @@
 
                     self::loadPlugin($dir, $path);
                 }
-            }
-
-            if (is_object($otherPlugins))
-            {
-                foreach($otherPlugins as $name => $path)
-                {
-                    if (isset(self::$plugins[$name]))
-                        throw new BaseError (sprintf("Plugin %s already loaded", $name), 'PLUGIN');
-
-                    self::loadPlugin($name, $path);
-                }
+                closedir($od);
             }
         }
 
@@ -407,13 +418,16 @@
             if (!is_dir($path))
                 return false;
 
+            if (isset(self::$plugins[$name]))
+                throw new BaseError (sprintf("Plugin %s already loaded", $name), 'PLUGIN');
+
             self::$plugins[$name] = $path;
             self::$applicationComponentPaths[] = $path;
 
             //Plugin has libs to include?
             $libPath = self::getFileName($path, 'lib');
             if (is_dir($libPath))
-                set_include_path (get_include_path ().PATH_SEPARATOR.$libPath);
+                set_include_path (get_include_path().PATH_SEPARATOR.$libPath);
 
             //Plugin has config file to include?
             $configFileName = self::getFileName($path, 'config.yml');
@@ -424,6 +438,8 @@
             $initFileName = self::getFileName($path, 'init.php');
             if (is_file($initFileName))
                 require_once $initFileName;
+
+            Logger::framework('DEBUG:PLUGIN', sprintf('%s loaded', $name));
         }
 
         private static function loadHelpers()

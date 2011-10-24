@@ -49,6 +49,12 @@
 		 */
 		public abstract function value($sql, $getRow = false);
 
+        public abstract function begin();
+
+        public abstract function commit();
+
+        public abstract function rollback();
+
         public abstract function getTableFields($table);
 
         public abstract function sqlEscaped($str);

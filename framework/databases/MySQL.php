@@ -34,6 +34,8 @@
 				Logger::framework('ERROR:DB', $this->getError());
 				return false;
 			}
+
+            mysql_query('SET autocommit=0;', $this->db);
 			//mysql_query("SET CHARACTER SET 'utf-8'", $this->db);
 			//mysql_query("SET NAMES utf-8", $this->db);
 
@@ -117,6 +119,18 @@
             else
                 return array_shift($row);
 		}
+
+        public function begin() {
+            return $this->command('BEGIN');
+        }
+
+        public function commit() {
+            return $this->command('COMMIT');
+        }
+
+        public function rollback() {
+            return $this->command('ROLLBACK');
+        }
 
         public function getTableFields($table)
         {
