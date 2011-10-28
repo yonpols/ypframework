@@ -42,7 +42,7 @@
             ob_start('ob_gzhandler');
 
             if ($this->contentType)
-                header("Content-Type: $this->contentType");
+                header("Content-Type: $this->contentType; charset=utf-8");
 
             echo $this->content;
             ob_flush();

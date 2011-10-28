@@ -1,11 +1,10 @@
 <?php
     class MySQLDataBase extends DataBase
 	{
-        /*
         public function __destruct()
         {
             mysql_close($this->db);
-        }*/
+        }
 
 		/*
 		 * 	conectar a la base de datos.

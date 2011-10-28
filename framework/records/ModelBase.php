@@ -245,7 +245,11 @@
         public function setAttributes($attributes)
         {
             foreach ($attributes as $key=>$value)
-                $this->__set ($key, $value);
+            {
+                if (isset($this->_modelParams->relations[$key]) && (!is_object($value)) && (!is_array($value)))
+                    continue;
+                $this->__set($key, $value);
+            }
         }
 
         public function getError($field=null)
@@ -290,6 +294,24 @@
             $fieldNames = array_keys($this->_modelParams->tableMetaData);
             if ($this->isNew())
             {
+                $result = true;
+                foreach($this->_modelParams->beforeCreate as $function)
+                    if (is_callable (array($this, $function)))
+                    {
+                        if (call_user_func(array($this, $function)) === false)
+                            $result = false;
+                    }
+                    else {
+                        $model::$database->rollback();
+                        throw new ErrorNoCallback(get_class($this), $function);
+                    }
+
+
+                if (!$result) {
+                    $model::$database->rollback();
+                    return false;
+                }
+
                 $fieldValues = array();
 
                 foreach ($fieldNames as $field)
@@ -305,8 +327,41 @@
                     $this->_modelData[$this->_modelParams->keyFields[0]] = $result;
                     $result = true;
                 }
+
+                if (!$result) {
+                    $model::$database->rollback();
+                    return false;
+                }
+                foreach($this->_modelParams->afterCreate as $function)
+                    if (is_callable (array($this, $function)))
+                    {
+                        if (call_user_func(array($this, $function)) === false)
+                            $result = false;
+                    }
+                    else {
+                        $model::$database->rollback();
+                        throw new ErrorNoCallback(get_class($this), $function);
+                    }
             } else
             {
+                $result = true;
+                foreach($this->_modelParams->beforeUpdate as $function)
+                    if (is_callable (array($this, $function)))
+                    {
+                        if (call_user_func(array($this, $function)) === false)
+                            $result = false;
+                    }
+                    else {
+                        $model::$database->rollback();
+                        throw new ErrorNoCallback(get_class($this), $function);
+                    }
+
+
+                if (!$result) {
+                    $model::$database->rollback();
+                    return false;
+                }
+
                 $fieldAssigns = array();
 
                 foreach ($fieldNames as $field)
@@ -317,6 +372,21 @@
                     implode(', ', $fieldAssigns), implode(' AND ', $this->getSQlIdConditions(false)));
 
                 $result = $model::$database->command($sql);
+
+                if (!$result) {
+                    $model::$database->rollback();
+                    return false;
+                }
+                foreach($this->_modelParams->afterUpdate as $function)
+                    if (is_callable (array($this, $function)))
+                    {
+                        if (call_user_func(array($this, $function)) === false)
+                            $result = false;
+                    }
+                    else {
+                        $model::$database->rollback();
+                        throw new ErrorNoCallback(get_class($this), $function);
+                    }
             }
 
             if ($result === false) {
@@ -376,11 +446,11 @@
             if (!$result)
                 return false;
 
+            $model = $this->_modelName;
             $model::$database->begin();
             $sql = sprintf("DELETE FROM %s WHERE %s",
                 $this->_modelParams->tableName, implode(' AND ', $this->getSQlIdConditions(false)));
 
-            $model = $this->_modelName;
             $result = $model::$database->command($sql);
 
             foreach($this->_modelParams->afterDelete as $function)
@@ -899,10 +969,14 @@
             $params->beforeLoad =       (isset($settings['_beforeLoad'])? $settings['_beforeLoad']: array());
             $params->beforeDelete =     (isset($settings['_beforeDelete'])? $settings['_beforeDelete']: array());
             $params->beforeSave =       (isset($settings['_beforeSave'])? $settings['_beforeSave']: array());
+            $params->beforeCreate =     (isset($settings['_beforeCreate'])? $settings['_beforeCreate']: array());
+            $params->beforeUpdate =     (isset($settings['_beforeUpdate'])? $settings['_beforeUpdate']: array());
 
             $params->afterLoad =        (isset($settings['_afterLoad'])? $settings['_afterLoad']: array());
             $params->afterDelete =      (isset($settings['_afterDelete'])? $settings['_afterDelete']: array());
             $params->afterSave =        (isset($settings['_afterSave'])? $settings['_afterSave']: array());
+            $params->afterCreate =     (isset($settings['_afterCreate'])? $settings['_afterCreate']: array());
+            $params->afterUpdate =     (isset($settings['_afterUpdate'])? $settings['_afterUpdate']: array());
 
             $params->relationObjects =  new Object();
             $params->tableMetaData = $model::$database->getTableFields($params->tableName);

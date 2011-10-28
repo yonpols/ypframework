@@ -156,7 +156,7 @@
             $time_end = microtime(true);
             $length_end = strlen($this->output);
             Logger::framework('DEBUG:MINIFY', sprintf('%s content minified %.2F%%. (%.2F secs)',
-                $this->outputType, (100-($length_end/$length_start)), ($time_end-$time_start)));
+                $this->outputType, (100-(($length_start)? $length_end/$length_start: 0)), ($time_end-$time_start)));
         }
 
         private function compile($viewName, $templateFile, $compiledFile)

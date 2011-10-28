@@ -42,17 +42,18 @@
             return $this->relatedModelName;
         }
 
-        protected function inCache($key) {
-            return isset($this->cache[$key]); //&& ($this->cache[$key]['used'] < 10);
+        protected function inCache($keyObject) {
+            return isset($this->cache[$keyObject->getObjectId()]); //&& ($this->cache[$key]['used'] < 10);
         }
 
-        protected function getCache($key) {
+        protected function getCache($keyObject) {
+            $key = $keyObject->getObjectId();
             $this->cache[$key]['used']++;
             return $this->cache[$key]['item'];
         }
 
-        protected function setCache($key, $item) {
-            $this->cache[$key] = array('used' => 0, 'item' => $item);
+        protected function setCache($keyObject, $item) {
+            $this->cache[$keyObject->getObjectId()] = array('used' => 0, 'item' => $item);
         }
     }
 ?>

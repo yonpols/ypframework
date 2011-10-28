@@ -1,6 +1,10 @@
 <?php
     interface IModelQuery
     {
+        public function sum($expression);
+        public function max($expression);
+        public function min($expression);
+        public function value($expression);
         public function fields($fields);
         public function count();
         public function first();

@@ -65,6 +65,23 @@
             return $this->_count;
         }
 
+        public function sum($expression) {
+            return $this->value(sprintf('SUM(%s)', $expression));
+        }
+
+        public function max($expression) {
+            return $this->value(sprintf('MAX(%s)', $expression));
+        }
+
+        public function min($expression) {
+            return $this->value(sprintf('MIN(%s)', $expression));
+        }
+
+        public function value($expression) {
+            $sql = $this->sql($expression);
+            return $this->database->value($sql);
+        }
+
         public function first()
         {
             $query = $this->limit(1)->query();
