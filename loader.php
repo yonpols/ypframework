@@ -10,47 +10,66 @@
         include(YPF_PATH.'/errors/no_www_path.php');
 
     ob_start();
-    require_once YPF_PATH.'/framework/functions.php';
+    require YPF_PATH.'/framework/version.php';
+    require YPF_PATH.'/framework/basic/functions.php';
 
-    //Load YPF clases
-    require_once YPF_PATH.'/framework/basic/Object.php';
-    require_once YPF_PATH.'/framework/basic/Initializable.php';
-    require_once YPF_PATH.'/framework/basic/YPFramework.php';
-    require_once YPF_PATH.'/framework/basic/Exceptions.php';
-    require_once YPF_PATH.'/framework/basic/Logger.php';
-    require_once YPF_PATH.'/framework/basic/Configuration.php';
-    require_once YPF_PATH.'/framework/basic/Test.php';
-    require_once YPF_PATH.'/framework/databases/DataBase.php';
+    //Basic clases
+    require YPF_PATH.'/framework/basic/YPFObject.php';
+    require YPF_PATH.'/framework/basic/YPFInitializable.php';
+    require YPF_PATH.'/framework/basic/YPFDateTime.php';
+    require YPF_PATH.'/framework/basic/YPFExceptions.php';
+    require YPF_PATH.'/framework/basic/YPFConfiguration.php';
 
-    require_once YPF_PATH.'/framework/application/ApplicationBase.php';
-    require_once YPF_PATH.'/framework/application/ControllerBase.php';
-    require_once YPF_PATH.'/framework/application/Route.php';
-    require_once YPF_PATH.'/framework/application/Cache.php';
-    require_once YPF_PATH.'/framework/application/Filter.php';
+    //Support classes
+    require YPF_PATH.'/framework/support/YPFCache.php';
+    require YPF_PATH.'/framework/support/YPFDataBase.php';
+    require YPF_PATH.'/framework/support/YPFTest.php';
+    require YPF_PATH.'/framework/support/YPFCommand.php';
+    require YPF_PATH.'/framework/support/Logger.php';
+    require YPF_PATH.'/framework/support/Mime.php';
 
-    require_once YPF_PATH.'/framework/templates/ViewBase.php';
+    //Application classes
+    require YPF_PATH.'/framework/application/YPFApplicationBase.php';
+    require YPF_PATH.'/framework/application/input/YPFRequest.php';
+    require YPF_PATH.'/framework/application/input/YPFRoute.php';
+    require YPF_PATH.'/framework/application/processing/YPFControllerBase.php';
+    require YPF_PATH.'/framework/application/processing/YPFViewBase.php';
+    require YPF_PATH.'/framework/application/data/IYPFModelQuery.php';
+    require YPF_PATH.'/framework/application/data/YPFModelQuery.php';
+    require YPF_PATH.'/framework/application/data/YPFModelBaseRelation.php';
+    require YPF_PATH.'/framework/application/data/YPFBelongsToRelation.php';
+    require YPF_PATH.'/framework/application/data/YPFHasOneRelation.php';
+    require YPF_PATH.'/framework/application/data/YPFHasManyRelation.php';
+    require YPF_PATH.'/framework/application/data/YPFHasManyThroughRelation.php';
+    require YPF_PATH.'/framework/application/data/YPFModelBase.php';
+    require YPF_PATH.'/framework/application/output/YPFContentFilter.php';
+    require YPF_PATH.'/framework/application/output/YPFOutputFilter.php';
+    require YPF_PATH.'/framework/application/output/YPFResponse.php';
 
-    require_once YPF_PATH.'/framework/records/IModelQuery.php';
-    require_once YPF_PATH.'/framework/records/ModelQuery.php';
-    require_once YPF_PATH.'/framework/records/ModelBaseRelation.php';
-    require_once YPF_PATH.'/framework/records/BelongsToRelation.php';
-    require_once YPF_PATH.'/framework/records/HasOneRelation.php';
-    require_once YPF_PATH.'/framework/records/HasManyRelation.php';
-    require_once YPF_PATH.'/framework/records/HasManyThroughRelation.php';
-    require_once YPF_PATH.'/framework/records/ModelBase.php';
+    //Framework
+    require YPF_PATH.'/framework/YPFramework.php';
 
-    //Load base clases
-    require_once APP_PATH.'/base/Application.php';
-    require_once APP_PATH.'/base/Controller.php';
-    require_once APP_PATH.'/base/Model.php';
-    require_once APP_PATH.'/base/View.php';
+    if (!defined('YPF_CMD')) {
+        //Load base clases
+        require APP_PATH.'/support/base/Application.php';
+        require APP_PATH.'/support/base/Controller.php';
+        require APP_PATH.'/support/base/Model.php';
+        require APP_PATH.'/support/base/View.php';
+    } else {
+        require YPF_PATH.'/new_app/support/base/Application.php';
+        require YPF_PATH.'/new_app/support/base/Controller.php';
+        require YPF_PATH.'/new_app/support/base/Model.php';
+        require YPF_PATH.'/new_app/support/base/View.php';
+
+        //Load libs
+        require YPF_PATH.'/extensions/libs/sfYaml/sfYamlDumper.php';
+    }
 
     //Load libs
-    require_once YPF_PATH.'/libs/sfYaml/sfYamlParser.php';
+    require YPF_PATH.'/extensions/libs/sfYaml/sfYamlParser.php';
 
     set_include_path(get_include_path().
-                        PATH_SEPARATOR.realpath(YPF_PATH.'/libs').
-                        PATH_SEPARATOR.realpath(APP_PATH.'/libs'));
-
+                        PATH_SEPARATOR.realpath(YPF_PATH.'/extensions/libs').
+                        PATH_SEPARATOR.realpath(APP_PATH.'/extensions/libs'));
     YPFramework::initialize();
 ?>

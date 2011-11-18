@@ -1,6 +1,6 @@
 package:
-  type: application
-  name: {{application_name}}
+  type: plugin
+  name: '{{plugin_name}}'
   version: 0.0.1
   author: 'Name of the author'
   description: 'Text of description'
@@ -8,7 +8,7 @@ package:
     framework:
       ypf: '>={{ypf_version}}'
     plugins:
-      captcha: '0.0.1'
+     plugin_name: 'plugin version'
     lib:
 
 paths:

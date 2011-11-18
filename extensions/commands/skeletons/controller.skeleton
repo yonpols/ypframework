@@ -1,0 +1,4 @@
+<?php
+    class {{controller_name}} extends Controller {{{controller_actions}}
+    }
+?>

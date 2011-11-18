@@ -1,6 +1,8 @@
 <?php
-    class MySQLDataBase extends DataBase
+    class MySQLDataBase extends YPFDataBase
 	{
+        protected $transaction = 0;
+
         public function __destruct()
         {
             mysql_close($this->db);
@@ -35,8 +37,7 @@
 			}
 
             mysql_query('SET autocommit=0;', $this->db);
-			//mysql_query("SET CHARACTER SET 'utf-8'", $this->db);
-			//mysql_query("SET NAMES utf-8", $this->db);
+            mysql_set_charset('utf8', $this->db);
 
 			$this->connected = true;
 			return true;
@@ -120,15 +121,27 @@
 		}
 
         public function begin() {
-            return $this->command('BEGIN');
+            if ($this->command('BEGIN')) {
+                $this->transaction++;
+                return true;
+            } else
+                return false;
         }
 
         public function commit() {
-            return $this->command('COMMIT');
+            if ($this->command('COMMIT')) {
+                $this->transaction--;
+                return true;
+            } else
+                return false;
         }
 
         public function rollback() {
-            return $this->command('ROLLBACK');
+            if ($this->command('ROLLBACK')) {
+                $this->transaction--;
+                return true;
+            } else
+                return false;
         }
 
         public function getTableFields($table)
@@ -139,7 +152,7 @@
                 $fields = array();
                 while ($row = $query->getNext())
                 {
-                    $obj = new Object();
+                    $obj = new YPFObject();
 
                     $obj->Name = $row['Field'];
                     $obj->Type = $row['Type'];
@@ -164,30 +177,42 @@
             return mysql_real_escape_string($str, $this->db);
         }
 
+        public function inTransaction() {
+            return ($this->transaction > 0);
+        }
+
         public function getError($sql=null)
         {
-            if ($sql === null)
-                return sprintf('%s: (%d - %s)', $this->dbname, mysql_errno($this->db), mysql_error($this->db));
+            if ($sql === null) {
+                if (!$this->db)
+                    return sprintf('%s: (%d - %s)', $this->dbname, mysql_errno(), mysql_error());
+                else
+                    return sprintf('%s: (%d - %s)', $this->dbname, mysql_errno($this->db), mysql_error($this->db));
+            }
             else
                 return sprintf('%s: (%d - %s) "%s"', $this->dbname, mysql_errno($this->db), mysql_error($this->db), $sql);
         }
 
         /*
          *  Recibe un modelo que debe estar en la base de datos.
-         *  version:    versión de la tabla
-         *  name:       nombre de la tabla
+         * *version:             versión de la tabla
+         *  name:                nombre de la tabla
          *  columns:
-         *      name:   nombre de la columna
-         *      type:   (key, integer, float, string, text, date, time, datetime, boolean, reference)
-         *     *length: para los strings. 255 por default
-         *      default:valor por defecto
+         *      name:            nombre de la columna
+         *      type:            (key, integer, float, string, text, date, time, datetime, boolean, reference)
+         *     *length:          para los strings. 255 por default
+         *      default:         valor por defecto
          *
-         *  indices:
-         *      name:   nombre del indice
-         *     *unique: false por default
-         *      columns:name,name,name,name...
+         * *indices:
+         *      name:            nombre del indice
+         *     *unique:          false por default
+         *      columns:         name,name,name,name...
+         * *pre_install_sql:     cadena sql a ejecutar antes de la instalación
+         * *post_install_sql:    cadena sql a ejecutar despues de la instalación
+         * *pre_uninstall_sql:   cadena sql a ejecutar antes de la desinstalación
+         * *post_uninstall_sql:  cadena sql a ejecutar despues de la desinstalación
          */
-        public function install($model, $from_version = null)
+        public function install($model, $from_version = null, $only_sql = false)
         {
             if (!$this->command('CREATE TABLE IF NOT EXISTS ypf_schema_history (version varchar(32), table_name varchar(64), schema_desc text)'))
                 return false;
@@ -199,6 +224,10 @@
 
             if (isset($model['version']) && $model['version']
                 && ($ultima_version !== false) && ($ultima_version['version'] == $model['version']))
+                    return false;
+
+            if (isset($model['pre_install_sql']))
+                if (!$this->command($model['pre_install_sql']))
                     return false;
 
             $version = date('YmdHis');
@@ -281,6 +310,11 @@
             }
 
             if ($this->command($sql)) {
+
+                if (isset($model['post_install_sql']))
+                    if (!$this->command($model['post_install_sql']))
+                        return false;
+
                 $sql = sprintf("INSERT INTO ypf_schema_history (version, table_name, schema_desc) VALUES ('%s', '%s', '%s')",
                                 $this->sqlEscaped($version),
                                 $this->sqlEscaped($model['name']),
@@ -289,14 +323,27 @@
                 Logger::framework('INFO:DB:INSTALL', sprintf('Installing: %s to version %s', $model['name'], $version));
                 return true;
             }
+
+            return false;
         }
 
         public function uninstall($table, $version)
         {
             $ultima_version = $this->value(sprintf("SELECT version FROM ypf_schema_history WHERE table_name = '%s' ORDER BY version DESC LIMIT 1", $this->sqlEscaped($table)));
-            $version_destino = $this->value(sprintf("SELECT * FROM ypf_schema_history WHERE table_name = '%s' AND version = '%s'", $this->sqlEscaped($table)), $this->sqlEscaped($version), true);
+            $version_destino = unserialize($this->value(sprintf("SELECT * FROM ypf_schema_history WHERE table_name = '%s' AND version = '%s'", $this->sqlEscaped($table)), $this->sqlEscaped($version), true));
 
-            return $this->install($version_destino, $ultima_version);
+            if (isset($model['pre_uninstall_sql']))
+                if (!$this->command($model['pre_uninstall_sql']))
+                    return false;
+
+            if ($this->install($version_destino, $ultima_version)) {
+                if (isset($model['post_uninstall_sql']))
+                    if (!$this->command($model['post_uninstall_sql']))
+                        return false;
+                return true;
+            }
+
+            return false;
         }
 
         private function getFieldSqlDefinition($field)
@@ -339,7 +386,7 @@
 	{
         private $_iteratorKey = null;
 
-        public function __construct(DataBase $database, $sql, $res)
+        public function __construct(YPFDataBase $database, $sql, $res)
         {
             parent::__construct($database, $sql, $res);
             $this->rows = mysql_num_rows($this->resource);
@@ -357,7 +404,7 @@
 
 			for ($i = 0; $i < $this->cols; $i++)
             {
-                $obj = new Object();
+                $obj = new YPFObject();
                 $info = mysql_fetch_field($this->resource, $i);
 
                 $obj->Name = $info->name;

@@ -1,0 +1,49 @@
+
+        public function index() {
+            $this->{{list_name}} = {{model_name}}::all();
+        }
+
+        public function newItem() {
+            $this->{{item_name}} = new {{model_name}};
+        }
+
+        public function show() {
+            $this->{{item_name}} = {{model_name}}::find($this->param('id'));
+        }
+
+        public function edit() {
+            $this->{{item_name}} = {{model_name}}::find($this->param('id'));
+        }
+
+        public function save() {
+            $this->{{item_name}} = {{model_name}}::find($this->param('id'));
+
+            if ($this->{{item_name}} === null)
+                $this->{{item_name}} = new {{model_name}};
+
+            $this->{{item_name}}->setAttributes($this->param('{{model_name}}'));
+
+            if ($this->{{item_name}}->save()) {
+                $this->notice('Item saved successfully');
+                $this->redirectTo($this->routes->{{list_name}}->path());
+            } else {
+                $this->error('Error when saving item');
+                if ($this->{{item_name}}->isNew())
+                    $this->render('new_item');
+                else
+                    $this->render('edit');
+            }
+        }
+
+        public function delete() {
+            $this->{{item_name}} = {{model_name}}::find($this->param('id'));
+
+            if ($this->{{item_name}} === null)
+                $this->error('Item not found');
+            elseif ($this->{{item_name}}->delete()) {
+                $this->notice('Item deleted successfully');
+            } else
+                $this->error('Error when deleting item');
+
+            $this->redirectTo($this->routes->{{list_name}}->path());
+        }
