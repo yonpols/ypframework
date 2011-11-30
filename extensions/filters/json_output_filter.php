@@ -1,9 +1,10 @@
 <?php
     class JsonOutputFilter extends YPFOutputFilter
     {
-        public function processOutput()
+        public function processOutput(YPFResponse $response)
         {
-            $this->contentType = 'application/json';
+            $response->header('Content-Type', 'application/json');
+
             $this->data->error = ($this->output->error == '')? null: $this->output->error;
             $this->data->notice = ($this->output->notice == '')? null: $this->output->notice;
 
@@ -12,7 +13,8 @@
             unset($this->data->paths);
             unset($this->data->app);
             unset($this->data->view);
-            $this->content = $this->data->__toJSON();
+
+            $response->write($this->data->__toJSON());
         }
     }
 ?>

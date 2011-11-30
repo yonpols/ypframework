@@ -1,5 +1,5 @@
 <?php
-    class YPFModelBase extends YPFObject implements Iterator, Initializable {
+    class YPFModelBase extends YPFObject implements Iterator {
         //Variables de ModelBase, no pueden redefinirse.
         private static $modelParams = null;
 
@@ -19,7 +19,7 @@
         //Métodos de ModelBase
         public static function getModelParams($model) {
             if (!isset(YPFModelBase::$modelParams->{$model}))
-                $model::initialize();
+                $model::loadMetadata();
             return (isset(YPFModelBase::$modelParams->{$model})? YPFModelBase::$modelParams->{$model}: null);
         }
 
@@ -136,7 +136,8 @@
             if ($values !== null)
                 $this->setAttributes ($values);
 
-            foreach($this->_modelParams->onInitialize as $function)
+            $className = $this->_modelName;
+            foreach($className::on('initialize') as $function)
                 if (is_callable (array($this, $function)))
                     call_user_func(array($this, $function));
                 else
@@ -234,7 +235,7 @@
             $this->_modelErrors = array();
         }
 
-        public final function save() {
+        public function save() {
             $model = $this->_modelName;
 
             if ($model::$database->inTransaction()) {
@@ -254,7 +255,7 @@
             }
         }
 
-        public final function delete() {
+        public function delete() {
             $model = $this->_modelName;
 
             if ($model::$database->inTransaction()) {
@@ -274,7 +275,7 @@
             }
         }
 
-        public final function isNew() {
+        public function isNew() {
             $sql = sprintf("SELECT COUNT(*) FROM %s WHERE %s",
                 $this->_modelParams->tableName, implode(' AND ', $this->getSqlIdConditions()));
 
@@ -282,7 +283,7 @@
             return ($model::$database->value($sql) == 0);
         }
 
-        public final function isValid() {
+        public function isValid() {
             $total_valid = true;
             $this->_modelErrors = array();
 
@@ -299,7 +300,9 @@
 
         public final function loadFromRecord($record) {
             $result = true;
-            foreach($this->_modelParams->beforeLoad as $function)
+            $className = get_class();
+
+            foreach($className::before('load') as $function)
                 if (is_callable (array($this, $function)))
                 {
                     if (call_user_func(array($this, $function)) === false)
@@ -366,7 +369,7 @@
             }
 
             $result = true;
-            foreach($this->_modelParams->afterLoad as $function)
+            foreach($className::before('after') as $function)
                 if (is_callable (array($this, $function)))
                 {
                     if (call_user_func(array($this, $function)) === false)
@@ -493,7 +496,7 @@
             $message = isset($parameters['message'])? $parameters['message']: 'no coinciden los valores';
             $sufix = isset($parameters['sufix'])? $parameters['sufix']: '_confirmation';
             $value = $this->__get($field.$sufix);
-            $valid = (!$value) || ($value === $this->__get($field));
+            $valid = ((!$value) && (!$this->__get($field))) || ($value === $this->__get($field));
 
             if (!$valid)
             {
@@ -580,11 +583,32 @@
             return $valid;
         }
 
-        protected function validate_with($field, $parameters) {
+        private function validate_with($field, $parameters) {
             $message = isset($parameters['message'])? $parameters['message']: 'parámetro incorrecto';
             $value = $this->__get($field);
             $function = $parameters['function'];
             $valid = $function($value);
+
+            if (!$valid)
+            {
+                if (!isset($this->_modelErrors[$field]))
+                    $this->_modelErrors[$field] = array();
+
+                $this->_modelErrors[$field][] = $message;
+            }
+
+            return $valid;
+        }
+
+        private function validate_uniqueness($field, $parameters) {
+            $message = isset($parameters['message'])? $parameters['message']: 'el valor no puede repetirse';
+            $value = $this->__get($field);
+
+            $count = $this->_modelParams->modelQuery->where("$field = ?", $value)
+                          ->where(sprintf('NOT (%s)', implode(' AND ', $this->getSqlIdConditions())))
+                          ->count();
+
+            $valid = ($count == 0);
 
             if (!$valid)
             {
@@ -603,7 +627,8 @@
 
             $model = $this->_modelName;
             $result = true;
-            foreach($this->_modelParams->beforeSave as $function)
+
+            foreach($model::before('save') as $function)
                 if (is_callable (array($this, $function)))
                 {
                     if (call_user_func(array($this, $function)) === false)
@@ -622,7 +647,7 @@
             if ($this->isNew())
             {
                 $result = true;
-                foreach($this->_modelParams->beforeCreate as $function)
+                foreach($model::before('create') as $function)
                     if (is_callable (array($this, $function)))
                     {
                         if (call_user_func(array($this, $function)) === false)
@@ -652,7 +677,7 @@
 
                 if (!$result)
                     return false;
-                foreach($this->_modelParams->afterCreate as $function)
+                foreach($model::after('create') as $function)
                     if (is_callable (array($this, $function)))
                     {
                         if (call_user_func(array($this, $function)) === false)
@@ -663,7 +688,7 @@
             } else
             {
                 $result = true;
-                foreach($this->_modelParams->beforeUpdate as $function)
+                foreach($model::before('update') as $function)
                     if (is_callable (array($this, $function)))
                     {
                         if (call_user_func(array($this, $function)) === false)
@@ -689,7 +714,7 @@
                 if (!$result)
                     return false;
 
-                foreach($this->_modelParams->afterUpdate as $function)
+                foreach($model::after('update') as $function)
                     if (is_callable (array($this, $function)))
                     {
                         if (call_user_func(array($this, $function)) === false)
@@ -718,7 +743,7 @@
                 }
 
                 $result = true;
-                foreach($this->_modelParams->afterSave as $function)
+                foreach($model::after('save') as $function)
                     if (is_callable (array($this, $function)))
                     {
                         if (call_user_func(array($this, $function)) === false)
@@ -736,7 +761,9 @@
 
         private function realDelete() {
             $result = true;
-            foreach($this->_modelParams->beforeDelete as $function)
+            $model = $this->_modelName;
+
+            foreach($model::before('delete') as $function)
                 if (is_callable (array($this, $function)))
                 {
                     if (call_user_func(array($this, $function)) === false)
@@ -748,13 +775,12 @@
             if (!$result)
                 return false;
 
-            $model = $this->_modelName;
             $sql = sprintf("DELETE FROM %s WHERE %s",
                 $this->_modelParams->tableName, implode(' AND ', $this->getSqlIdConditions(false)));
 
             $result = $model::$database->command($sql);
 
-            foreach($this->_modelParams->afterDelete as $function)
+            foreach($model::after('delete') as $function)
                 if (is_callable (array($this, $function)))
                 {
                     if (call_user_func(array($this, $function)) === false)
@@ -780,8 +806,9 @@
 
             foreach($this->_modelParams->keyFields as $field)
             {
-                $conditions[] = sprintf('(%s%s = %s)', $aliasPrefix, $field,
-                    Model::getFieldSQLRepresentation ($field, $this->__get($field), $this->_modelParams));
+                $value = Model::getFieldSQLRepresentation ($field, $this->__get($field), $this->_modelParams);
+                $conditions[] = sprintf('(%s%s %s %s)', $aliasPrefix, $field,
+                    ($value == 'NULL')? 'IS':'=', $value);
             }
 
             return $conditions;
@@ -939,9 +966,7 @@
 
         //Initializable implementation
         //======================================================================
-        public static final function finalize() { }
-
-        public static final function initialize() {
+        public static final function loadMetadata() {
             $model = get_called_class();
 
             if ($model::$database === null)
@@ -989,25 +1014,10 @@
             $params->relations =        (isset($settings['_relations'])? $settings['_relations']: array());
 
             $params->validations =      (isset($settings['_validations'])? $settings['_validations']: array());
-            foreach ($params->validations as $field)
+            foreach ($params->validations as $k=>$field)
                 foreach ($field as $i=>$validation)
                     if (!is_array($validation))
-                        $field[$i] = array('value' => $validation);
-
-            //Callbacks
-            $params->onInitialize =       (isset($settings['_onInitialize'])? $settings['_onInitialize']: array());
-
-            $params->beforeLoad =       (isset($settings['_beforeLoad'])? $settings['_beforeLoad']: array());
-            $params->beforeDelete =     (isset($settings['_beforeDelete'])? $settings['_beforeDelete']: array());
-            $params->beforeSave =       (isset($settings['_beforeSave'])? $settings['_beforeSave']: array());
-            $params->beforeCreate =     (isset($settings['_beforeCreate'])? $settings['_beforeCreate']: array());
-            $params->beforeUpdate =     (isset($settings['_beforeUpdate'])? $settings['_beforeUpdate']: array());
-
-            $params->afterLoad =        (isset($settings['_afterLoad'])? $settings['_afterLoad']: array());
-            $params->afterDelete =      (isset($settings['_afterDelete'])? $settings['_afterDelete']: array());
-            $params->afterSave =        (isset($settings['_afterSave'])? $settings['_afterSave']: array());
-            $params->afterCreate =     (isset($settings['_afterCreate'])? $settings['_afterCreate']: array());
-            $params->afterUpdate =     (isset($settings['_afterUpdate'])? $settings['_afterUpdate']: array());
+                        $params->validations[$k][$i] = array('value' => $validation);
 
             $params->relationObjects =  new YPFObject();
             $params->tableMetaData = $model::$database->getTableFields($params->tableName);

@@ -4,13 +4,13 @@
             '*/*' => array('*'),
             'text/html' => array('html', 'htm'),
             'application/xhtml+xml' => array('xhtml'),
-            'application/ecmascript' => array('js')
+            'text/javascript' => array('js')
         );
         private static $extensions = array(
             'htm' => array('text/html'),
             'html' => array('text/html'),
             'xhtml' => array('application/xhtml+xml'),
-            'js' => array('application/ecmascript')
+            'js' => array('text/javascript')
         );
 
         public static function register($mime, $extension) {

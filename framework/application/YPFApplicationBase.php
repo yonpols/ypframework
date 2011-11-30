@@ -34,7 +34,7 @@
             $this->output->viewName = null;
             $this->output->layout = 'main';
             $this->output->profile = null;
-            $this->output->format = 'html';
+            $this->output->format = null;
             $this->output->charset = 'utf-8';
 
             if (isset($_SESSION['error']))
@@ -165,6 +165,7 @@
                     $this->actions = array(
                         array('controller' => $route->getController(), 'action' => $route->getAction())
                     );
+
                     return;
                 }
             }

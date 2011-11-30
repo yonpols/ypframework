@@ -58,6 +58,14 @@
             return $this->acceptContents;
         }
 
+        public function getFlatAcceptContents() {
+            $accept = array();
+            foreach ($this->acceptContents as $contents)
+                $accept = array_merge ($accept, $contents);
+
+            return $accept;
+        }
+
         public function getAcceptLanguages() {
             return $this->acceptLanguages;
         }
@@ -172,7 +180,7 @@
             $this->acceptContents = array();
             foreach (explode(',', $_SERVER['HTTP_ACCEPT']) as $str) {
                 $mime = explode(';', $str);
-                $accept_type = $mime[0];
+                $accept_type = trim($mime[0]);
                 $accept_value = 1;
 
                 for($i = 1; $i < count($mime); $i++) {

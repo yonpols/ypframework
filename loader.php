@@ -71,5 +71,11 @@
     set_include_path(get_include_path().
                         PATH_SEPARATOR.realpath(YPF_PATH.'/extensions/libs').
                         PATH_SEPARATOR.realpath(APP_PATH.'/extensions/libs'));
+
+    Application::initialize();
+    Controller::initialize();
+    Model::initialize();
+    View::initialize();
+    
     YPFramework::initialize();
 ?>

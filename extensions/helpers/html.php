@@ -11,4 +11,8 @@
         else
             return htmlentities($text);
     }
+
+    function to_js($js) {
+        return str_replace("\n", "\\n", addslashes($js));
+    }
 ?>

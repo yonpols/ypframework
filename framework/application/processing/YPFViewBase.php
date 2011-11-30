@@ -16,9 +16,6 @@
         private $current_section = 'main';
         private $sections = array();
 
-        protected static $_beforeFilter = array();
-        protected static $_afterFilter = array();
-
         public final function __construct(Application $application, $viewData = null, $viewProfile = null) {
             parent::__construct();
 
@@ -71,7 +68,7 @@
                 $this->compile($viewName, $templateFileName, $compiledFileName);
 
             $className = get_class($this);
-            foreach($className::$_beforeFilter as $proc)
+            foreach($className::before('filter') as $proc)
                 if (is_callable (array($this, $proc)))
                     call_user_func(array($this, $proc));
                 else
@@ -81,7 +78,7 @@
             include($compiledFileName);
             $this->end_content();
 
-            foreach($className::$_afterFilter as $proc)
+            foreach($className::after('filter') as $proc)
                 if (is_callable (array($this, $proc)))
                     call_user_func(array($this, $proc));
                 else
@@ -173,7 +170,7 @@
                 throw new ErrorMultipleViewsFound ($viewName);
 
             if ($contentType == '*/*')
-                $contentType = Mime::getContentType ($templateFiles[0]);
+                $contentType = Mime::getMimeFromFile ($templateFiles[0]);
 
             $this->outputType = $contentType;
             return $templateFiles[0];

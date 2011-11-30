@@ -9,9 +9,6 @@
         protected $data;
         protected $output;
 
-        protected static $_beforeAction = array();
-        protected static $_afterAction = array();
-
         public function  __construct(Application $application) {
             parent::__construct();
 
@@ -55,7 +52,7 @@
             $this->params = $this->application->getRequest()->getParameters();
             $this->output = $this->application->getOutput();
 
-            foreach($className::$_beforeAction as $proc)
+            foreach($className::before('action') as $proc)
                 if (is_callable (array($this, $proc)))
                     call_user_func(array($this, $proc), $action);
                 else
@@ -70,7 +67,7 @@
 
             } catch (StopRenderException $r) { }
 
-            foreach($className::$_afterAction as $proc)
+            foreach($className::after('action') as $proc)
                 if (is_callable (array($this, $proc)))
                     call_user_func(array($this, $proc), $action);
                 else

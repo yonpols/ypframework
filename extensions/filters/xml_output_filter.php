@@ -1,12 +1,13 @@
 <?php
     class XmlOutputFilter extends YPFOutputFilter
     {
-        protected function processOutput()
+        public function processOutput(YPFResponse $response)
         {
-            $this->contentType = 'text/xml';
+            $response->header('Content-Type', 'text/xml');
             $this->data->error = ($this->output->error == '')? null: $this->output->error;
             $this->data->notice = ($this->output->notice == '')? null: $this->output->notice;
-            $this->content = $this->data->__toXML();
+
+            $response->write($this->data->__toXML());
         }
     }
 ?>

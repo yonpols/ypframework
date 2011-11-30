@@ -17,20 +17,8 @@
         public function send() {
             $output = $this->application->getOutput();
 
-            //Prepare output filter
-            $className = YPFramework::camelize($output->format.'_output_filter');
-            $classFileName = YPFramework::getClassPath($className, '', 'extensions/filters');
-            if ($classFileName === false)
-                $classFileName = YPFramework::getClassPath('HtmlOutputFilter', '', 'extensions/filters');
-
-
-            if ($classFileName !== false)
-            {
-                require_once $classFileName;
-                $filter = new $className($this->application, $this->controller, $this->action);
-            } else
-                throw new ErrorComponentNotFound ('Filter', $className);
-
+            $formats = ($output->format === null)? $this->application->getRequest()->getFlatAcceptContents(): $output->format;
+            $filter = YPFOutputFilter::getFilter($formats, $this->application, $this->controller, $this->action);
             $filter->processOutput($this);
 
             //Send response to server

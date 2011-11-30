@@ -132,6 +132,7 @@
                 $className = $namespace.'\\'.$className;
 
                 require_once $classFileName;
+                $className::initialize();
                 return new $className(self::$application);
             } else
                 throw new ErrorComponentNotFound ('Controller', $className);
@@ -464,5 +465,6 @@
             throw new ErrorComponentNotFound ('', $info['namespace'].'\\'.$info['className']);
 
         require $fileName;
+        $className::initialize();
     }
 ?>

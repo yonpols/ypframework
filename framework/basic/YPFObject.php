@@ -3,14 +3,13 @@
     {
         private static $__mixin_included = null;
         private static $__object_ids = 0;
+        public static $__callbacks = null;
+        private static $__loadedClasses = null;
 
         private $id = null;
 
-        public static function __include($className)
-        {
-            if (YPFObject::$__mixin_included === null)
-                YPFObject::$__mixin_included = new stdClass();
-
+        //Mixins================================================================
+        public static function __include($className) {
             $baseClass = get_called_class();
 
             if (!isset(YPFObject::$__mixin_included->{$baseClass}))
@@ -45,8 +44,7 @@
             return true;
         }
 
-        public function __construct()
-        {
+        public function __construct() {
             $baseName = get_class($this);
 
             while ($baseName)
@@ -67,8 +65,7 @@
             }
         }
 
-        public function __call($name, $arguments)
-        {
+        public function __call($name, $arguments) {
             $baseName = get_class($this);
 
             do {
@@ -90,6 +87,7 @@
             throw new BaseError(sprintf('No method defined for: %s->%s', $baseName, $name));
         }
 
+        //Object UID============================================================
         public function getObjectId() {
             if ($this->id === null)
                 $this->id = sprintf("%x", time()+(self::$__object_ids++));
@@ -97,8 +95,101 @@
             return $this->id;
         }
 
-        public function __toString()
-        {
+        //Object Event Model====================================================
+        public static function initialize() {
+            $className = get_called_class();
+
+            if ($className !== 'YPFObject') {
+                YPFObject::$__loadedClasses[] = $className;
+                return;
+            }
+
+            YPFObject::$__mixin_included = new stdClass();
+            YPFObject::$__callbacks = new stdClass();
+            YPFObject::$__loadedClasses = array();
+        }
+
+        public static function finalize() {
+            if (get_called_class() !== 'YPFObject')
+                return;
+
+            foreach (YPFObject::$__loadedClasses as $className)
+                $className::finalize();
+        }
+
+        public static final function before($event, $action = null) {
+            $className = get_called_class();
+            $callbacks = self::__getCallbacks($className);
+
+            if (!isset($callbacks->before->{$event}))
+                $callbacks->before->{$event} = array();
+
+            if ($action === null)
+                return $callbacks->before->{$event};
+            elseif ($action === false)
+                $callbacks->before->{$event} = array();
+            else
+                $callbacks->before->{$event}[] = $action;
+        }
+
+        public static final function after($event, $action = null) {
+            $className = get_called_class();
+            $callbacks = self::__getCallbacks($className);
+
+            if (!isset($callbacks->after->{$event}))
+                $callbacks->after->{$event} = array();
+
+            if ($action === null)
+                return $callbacks->after->{$event};
+            elseif ($action === false)
+                $callbacks->after->{$event} = array();
+            else
+                $callbacks->after->{$event}[] = $action;
+        }
+
+        public static final function on($event, $action = null) {
+            $className = get_called_class();
+            $callbacks = self::__getCallbacks($className);
+
+            if (!isset($callbacks->on->{$event}))
+                $callbacks->on->{$event} = array();
+
+            if ($action === null)
+                return $callbacks->on->{$event};
+            elseif ($action === false)
+                $callbacks->on->{$event} = array();
+            else
+                $callbacks->on->{$event}[] = $action;
+        }
+
+        private static function __getCallbacks($className) {
+            if (!isset(YPFObject::$__callbacks->{$className})) {
+                $callbacks = new stdClass();
+                $callbacks->before = new stdClass();
+                $callbacks->after = new stdClass();
+                $callbacks->on = new stdClass();
+
+                $parentClass = get_parent_class($className);
+                if ($parentClass != 'YPFObject') {
+                    $parentCallbacks = self::__getCallbacks($parentClass);
+
+                    foreach ($parentCallbacks->before as $key => $vals)
+                        $callbacks->before->{$key} = $vals;
+                    foreach ($parentCallbacks->after as $key => $vals)
+                        $callbacks->after->{$key} = $vals;
+                    foreach ($parentCallbacks->on as $key => $vals)
+                        $callbacks->on->{$key} = $vals;
+                }
+
+                YPFObject::$__callbacks->{$className} = $callbacks;
+            } else
+                $callbacks = YPFObject::$__callbacks->{$className};
+
+            return $callbacks;
+        }
+
+        //Object serialization==================================================
+        public function __toString() {
             $str = sprintf('<%s ', get_class($this));
             foreach ($this as $k=>$v)
                 $str .= sprintf('%s: %s; ', $k, var_export($v, true));
@@ -106,8 +197,7 @@
             return substr($str, 0, -2).'>';
         }
 
-        public function __toJSONRepresentable()
-        {
+        public function __toJSONRepresentable() {
             $result = array();
 
             foreach ($this as $k=>$v)
@@ -123,13 +213,11 @@
             return $result;
         }
 
-        public function __toJSON()
-        {
+        public function __toJSON() {
             return json_encode($this->__toJSONRepresentable());
         }
 
-        public function __toXML($xmlParent = null)
-        {
+        public function __toXML($xmlParent = null) {
             if ($xmlParent === null)
                 $root = new SimpleXMLElement('<?xml version="1.0" encoding="utf-8"?><root />');
             else
@@ -147,4 +235,6 @@
                 return $root->asXML();
         }
     }
+
+    YPFObject::initialize();
 ?>
