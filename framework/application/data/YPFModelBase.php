@@ -995,7 +995,7 @@
                     $params->keyFields = array_map (function($i){ return $i['name']; }, $settings['_schema']['columns']);
             } else
             {
-                $params->tableName =        (isset($settings['_tableName'])? $settings['_tableName']: strtolower($model.'s'));
+                $params->tableName =        (isset($settings['_tableName'])? $settings['_tableName']: YPFramework::underscore($model));
                 $params->keyFields =        (isset($settings['_keyFields'])? arraize($settings['_keyFields']): array('id'));
             }
 
