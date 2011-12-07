@@ -1,5 +1,5 @@
 <?php
-    class DeployControllerCommand extends YPFCommand {
+    class DeployCommand extends YPFCommand {
         public function getDescription() {
             return 'prepares the application for a packed deployment on a website';
         }

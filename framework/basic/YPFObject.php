@@ -128,7 +128,7 @@
                 return $callbacks->before->{$event};
             elseif ($action === false)
                 $callbacks->before->{$event} = array();
-            else
+            elseif (array_search($action, $callbacks->before->{$event}) === false)
                 $callbacks->before->{$event}[] = $action;
         }
 
@@ -143,7 +143,7 @@
                 return $callbacks->after->{$event};
             elseif ($action === false)
                 $callbacks->after->{$event} = array();
-            else
+            elseif (array_search($action, $callbacks->after->{$event}) === false)
                 $callbacks->after->{$event}[] = $action;
         }
 
@@ -158,7 +158,7 @@
                 return $callbacks->on->{$event};
             elseif ($action === false)
                 $callbacks->on->{$event} = array();
-            else
+            elseif (array_search($action, $callbacks->on->{$event}) === false)
                 $callbacks->on->{$event}[] = $action;
         }
 
@@ -225,10 +225,17 @@
 
             foreach($this as $key=>$val)
             {
-                if (is_scalar($val) or ($val == null))
-                    $root->addChild ($key, $val);
-                elseif (is_object($val))
-                    $this->__toXML($root->addChild($key));
+                if (is_array($val)) {
+                    $parent = $root->addChild($key);
+                    foreach($val as $item)
+                        if (is_object($item) && ($item instanceof YPFObject))
+                            $item->__toXML($parent);
+                        else
+                            $parent->addChild($item);
+                } elseif (is_scalar($val) or ($val == null))
+                    $root->addChild($key, $val);
+                elseif (is_object($val) && ($val instanceof YPFObject))
+                    $val->__toXML($root->addChild($key));
             }
 
             if ($xmlParent === null)

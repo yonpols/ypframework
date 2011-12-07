@@ -133,7 +133,11 @@
                 elseif (is_array($sqlConditions) && !empty($sqlConditions)) {
                     $conditions = array();
                     foreach ($sqlConditions as $field => $value)
-                        $conditions[] = sprintf('(%s = %s)', $field, $this->getSqlRepresentation($value));
+                        if (is_int($field))
+                            $conditions[] = $value;
+                        else
+                            $conditions[] = sprintf('(%s = %s)', $field, $this->getSqlRepresentation($value));
+
 
                     $query->sqlConditions[] = implode(' AND ', $conditions);
                 }
