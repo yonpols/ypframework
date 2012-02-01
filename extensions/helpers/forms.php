@@ -143,16 +143,20 @@
         return $html;
     }
 
-    function form_relationfield($name, $object, $condition=array(), $allowBlank=false)
+    function form_relationfield($name, $object, $condition=null, $allowBlank=false)
     {
         $relation = $object->getRelationObject($name);
-        if (!$relation instanceof YPFModelBaseRelation)
+        if (!$relation instanceof YPFBelongsToRelation)
             return;
 
-        $dao = eval(sprintf('return new %s();', $relation->getRelatedModelName()));
-        $values = $dao->select($condition)->toArray();
+        $modelName = $relation->getRelatedModelName();
 
-        return form_select($name, $values, $object, $allowBlank);
+        if ($condition !== null)
+            $values = $modelName::where($condition)->toArray();
+        else
+            $values = $modelName::all()->toArray();
+
+        return form_select($name.'_id', $values, $object, $allowBlank);
     }
 
     function form_datefield($name, $object)

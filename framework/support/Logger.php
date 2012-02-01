@@ -1,5 +1,5 @@
 <?php
-    class Logger extends YPFObject implements Initializable
+    class Logger extends YPFObject
     {
         private static $frameworkLog = array();
         private static $frameworkLogFileName = null;
@@ -18,34 +18,20 @@
 
         public static function initialize()
         {
-            $basePath = YPFramework::getSetting('paths.log');
+            $basePath = YPFramework::getPaths()->log;
             self::$mode = YPFramework::getMode();
 
             if (!defined('YPF_CMD') || YPFramework::getApplication() !== false) {
                 self::$frameworkLogFileName = YPFramework::getFileName($basePath, sprintf('ypf-%s-%s.log', self::$mode, date('Y-m')));
                 self::$applicationLogFileName = YPFramework::getFileName($basePath, sprintf('app-%s-%s.log', self::$mode, date('Y-m')));
-
-                if (count(self::$frameworkLog))
-                {
-                    $fd = fopen(self::$frameworkLogFileName, "a");
-                    foreach(self::$frameworkLog as $log)
-                        fwrite($fd, $log);
-                    fclose($fd);
-                    self::$frameworkLog = array();
-                }
-
-                if (count(self::$applicationLog))
-                {
-                    $fd = fopen(self::$applicationLogFileName, "a");
-                    foreach(self::$applicationLog as $log)
-                        fwrite($fd, $log);
-                    fclose($fd);
-                    self::$applicationLog = array();
-                }
             }
+
+            self::writeLogs();
         }
 
-        public static function finalize() { }
+        public static function finalize() {
+            self::writeLogs();
+        }
 
         public static function framework($type, $log)
         {
@@ -61,9 +47,11 @@
 
             if (self::$frameworkLogFileName)
             {
-                $fd = fopen(self::$frameworkLogFileName, "a");
-                fwrite($fd, $text);
-                fclose($fd);
+                if (($fd = @fopen(self::$frameworkLogFileName, "a"))) {
+                    fwrite($fd, $text);
+                    fclose($fd);
+                } else
+                    self::$frameworkLog[] = $text;
             } else
                 self::$frameworkLog[] = $text;
         }
@@ -82,11 +70,37 @@
 
             if (self::$applicationLogFileName)
             {
-                $fd = fopen(self::$applicationLogFileName, "a");
-                fwrite($fd, $text);
-                fclose($fd);
+                if (($fd = @fopen(self::$applicationLogFileName, "a"))) {
+                    fwrite($fd, $text);
+                    fclose($fd);
+                } else
+                    self::$applicationLog[] = $text;
             } else
                 self::$applicationLog[] = $text;
+        }
+
+        private static function writeLogs() {
+            if (!defined('YPF_CMD') || YPFramework::getApplication() !== false) {
+                if (count(self::$frameworkLog))
+                {
+                    if (($fd = @fopen(self::$frameworkLogFileName, "a"))) {
+                        foreach(self::$frameworkLog as $log)
+                            fwrite($fd, $log);
+                        fclose($fd);
+                        self::$frameworkLog = array();
+                    }
+                }
+
+                if (count(self::$applicationLog))
+                {
+                    if (($fd = @fopen(self::$applicationLogFileName, "a"))) {
+                        foreach(self::$applicationLog as $log)
+                            fwrite($fd, $log);
+                        fclose($fd);
+                        self::$applicationLog = array();
+                    }
+                }
+            }
         }
 
         private static function getColor($type)

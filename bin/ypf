@@ -18,7 +18,20 @@
         if ($command === false)
             die ("invalid ypf installation\n");
 
-        exit($command->run($parameters));
+        $command_class = get_class($command);
+
+        foreach($command_class::before('run') as $callback)
+            if (is_callable($callback))
+                if (call_user_func ($callback, $command, $parameters) === false)
+                    exit(1000);
+
+        $result = $command->run($parameters);
+
+        foreach($command_class::after('run') as $callback)
+            if (is_callable($callback))
+                call_user_func ($callback, $command, $parameters);
+
+        exit($result);
     }
 
 

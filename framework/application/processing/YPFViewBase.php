@@ -22,7 +22,7 @@
             $this->profile = $viewProfile;
             $this->application = $application;
             $this->formats = $application->getRequest()->getAcceptContents();
-            $this->tempPath = YPFramework::getSetting('paths.tmp');
+            $this->tempPath = YPFramework::getPaths()->tmp;
 
             $this->clear($viewData);
 
@@ -50,7 +50,7 @@
             $this->data->view = $this;
             $this->data->app = $this->application;
             $this->data->routes = $this->application->getRoutes();
-            $this->data->paths = YPFramework::getSetting('paths');
+            $this->data->paths = YPFramework::getPaths();
             $this->data->route = $this->application->getCurrentRoute();
         }
 

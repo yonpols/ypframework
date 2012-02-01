@@ -1,5 +1,5 @@
 <?php
-    class YPFCache extends YPFObject implements Initializable
+    class YPFCache extends YPFObject
     {
         protected static $cachePath;
         protected static $fileBased;

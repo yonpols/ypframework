@@ -1,5 +1,5 @@
 <?php
-    abstract class YPFCommand {
+    abstract class YPFCommand extends YPFObject {
         const RESULT_OK = 0;
         const RESULT_INVALID_PARAMETERS = 1;
         const RESULT_FILESYSTEM_ERROR = 2;
@@ -25,7 +25,7 @@
         protected function requirePackage($types) {
             $found = false;
             $types = func_get_args();
-            $package_type = YPFramework::getSetting('package.type');
+            $package_type = YPFramework::getPackage()->type;
 
             foreach($types as $type)
                 if ($package_type == $type) {

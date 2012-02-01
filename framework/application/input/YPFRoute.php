@@ -18,7 +18,25 @@
         private $baseParameters;
         private $parameters;
 
-        public function __construct($name, $config, $baseUrl)
+        public static function get($name, $config, $baseUrl, $parent) {
+            if (!isset($config->type))
+                $config->type = 'basic';
+
+            $class_name = YPFramework::camelize($config->type . '_route');
+
+            if (!class_exists($class_name, false)) {
+                $class_filename = YPFramework::getClassPath($class_name, 'extensions', 'routers');
+
+                if (!file_exists($class_filename))
+                    throw new ErrorComponentNotFound ('router', $class_name);
+
+                require $class_filename;
+            }
+
+            return new $class_name($name, $config, $baseUrl, $parent);
+        }
+
+        protected function __construct($name, $config, $baseUrl, $parent)
         {
             if (!isset($config->match))
                 throw new BaseError("No 'match' rule found in route: $name");
@@ -27,6 +45,7 @@
             $this->name = $name;
             $this->match = $config->match;
             unset($this->baseParameters['match']);
+            unset($this->baseParameters['type']);
             $this->method = null;
             $this->baseUrl = $baseUrl;
 
@@ -93,6 +112,8 @@
             $this->pattern = '/^'.$rule.'$/';
             $this->config = $config;
             $this->config->name = $name;
+
+            $parent->{$name} = $this;
         }
 
         public function matches(YPFRequest $request)
@@ -220,6 +241,14 @@
                 return $this->config->{$name};
             else
                 return null;
+        }
+
+        public function getDebugInfo() {
+            $info = sprintf('%s %s %s', $this->name, $this->method, $this->action);
+            $info = '<ul>';
+            foreach ($this->parameters as $key => $val)
+            $info .= sprintf('<li><strong>%s:</strong> %s</li>', $key, $val);
+            return $info .'</ul>';
         }
     }
 ?>

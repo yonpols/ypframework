@@ -52,10 +52,10 @@
         {
             $root = $this->getRoot();
 
-            if (!isset($root->application))
+            if (!isset($root->environments))
                 return false;
 
-            if (!isset($root->routes))
+            if (empty($root->environments))
                 return false;
 
             return true;
@@ -81,7 +81,7 @@
             {
                 $key = array_keys($config);
 
-                if (empty($key) | (is_numeric($key[0])))
+                if (empty($key) or (is_numeric($key[0])))
                 {
                     $object = array();
                     foreach ($config as $val)
@@ -90,8 +90,14 @@
                 } else
                 {
                     $object = new YPFObject();
-                    foreach ($config as $key=>$val)
-                        $object->{$key} = $this->objetize ($val);
+                    foreach ($config as $key=>$val) {
+                        if (($pos = strrpos($key, ':')) !== false) {
+                            $copy = substr($key, $pos+1);
+                            $key = substr($key, 0, $pos);
+                            $object->{$key} = $this->objetize(array_merge_deep($config[$copy], $val));
+                        } else
+                            $object->{$key} = $this->objetize ($val);
+                    }
                     return $object;
                 }
             } else

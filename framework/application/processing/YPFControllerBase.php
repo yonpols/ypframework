@@ -6,6 +6,7 @@
         protected $routes;
         protected $route;
 
+        protected $params;
         protected $data;
         protected $output;
 
@@ -20,6 +21,7 @@
             $this->application = $application;
             $this->routes = $application->getRoutes();
             $this->route = $application->getCurrentRoute();
+            $this->params = array();
         }
 
         public function __get($name) {

@@ -16,12 +16,13 @@
         public function __construct() {
             parent::__construct();
 
-            $this->paths = YPFramework::getSetting('paths');
+            $this->paths = YPFramework::getPaths();
             $routes = YPFramework::getSetting('routes');
             $this->routes = new YPFObject;
 
+            $url = $this->getSetting('url');
             foreach($routes as $name => $data)
-                $this->routes->{$name} = new YPFRoute($name, $data, $this->getSetting('url'));
+                YPFRoute::get($name, $data, $url, $this->routes);
 
             $this->data = new YPFObject();
 

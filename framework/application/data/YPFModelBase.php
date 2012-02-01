@@ -276,6 +276,9 @@
         }
 
         public function isNew() {
+            if ($this->isIdNull())
+                return true;
+
             $sql = sprintf("SELECT COUNT(*) FROM %s WHERE %s",
                 $this->_modelParams->tableName, implode(' AND ', $this->getSqlIdConditions()));
 
@@ -480,7 +483,7 @@
         private function validate_presence($field, $parameters) {
             $message = isset($parameters['message'])? $parameters['message']: 'se esperaba un valor';
             $value = $this->__get($field);
-            $valid = ($value != '') && ($value !== NULL);
+            $valid = ($value !== '') && ($value !== NULL);
             if (!$valid)
             {
                 if (!isset($this->_modelErrors[$field]))
@@ -703,7 +706,7 @@
                 $fieldAssigns = array();
 
                 foreach ($fieldNames as $field)
-                    if ($this->_modelFieldModified[$field])
+                    if (isset($this->_modelFieldModified[$field]) && $this->_modelFieldModified[$field])
                         $fieldAssigns[] = sprintf("%s = %s", $field, Model::getFieldSQLRepresentation($field, $this->__get($field), $this->_modelParams));
 
                 $sql = sprintf("UPDATE %s SET %s WHERE %s", $this->_modelParams->tableName,
@@ -814,7 +817,7 @@
             return $conditions;
         }
 
-        private function getRelationObject($name) {
+        public function getRelationObject($name) {
             if (isset($this->_modelParams->relations[$name]))
             {
                 if (!isset($this->_modelParams->relationObjects->{$name}))
@@ -827,6 +830,15 @@
             }
 
             return null;
+        }
+
+        private function isIdNull() {
+            $isNull = true;
+
+            foreach($this->_modelParams->keyFields as $field)
+                $isNull = $isNull && ($this->__get($field) === null);
+
+            return $isNull;
         }
 
         //Object redefinition

@@ -12,10 +12,10 @@
     ob_start();
     require YPF_PATH.'/framework/version.php';
     require YPF_PATH.'/framework/basic/functions.php';
+    require YPF_PATH.'/framework/basic/errors.php';
 
     //Basic clases
     require YPF_PATH.'/framework/basic/YPFObject.php';
-    require YPF_PATH.'/framework/basic/YPFInitializable.php';
     require YPF_PATH.'/framework/basic/YPFDateTime.php';
     require YPF_PATH.'/framework/basic/YPFExceptions.php';
     require YPF_PATH.'/framework/basic/YPFConfiguration.php';
@@ -72,10 +72,5 @@
                         PATH_SEPARATOR.realpath(YPF_PATH.'/extensions/libs').
                         PATH_SEPARATOR.realpath(APP_PATH.'/extensions/libs'));
 
-    Application::initialize();
-    Controller::initialize();
-    Model::initialize();
-    View::initialize();
-    
     YPFramework::initialize();
 ?>

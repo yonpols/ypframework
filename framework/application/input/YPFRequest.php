@@ -148,17 +148,31 @@
                 $this->parameters = array_merge ($parameters, $this->parameters);
         }
 
+        public function getDebugInfo() {
+            $info = '<ul>';
+            $info .= sprintf('<li><strong>parameters:</strong>%s</li>', var_export($this->parameters, true));
+            $info .= sprintf('<li><strong>requestUri:</strong>%s</li>', var_export($this->requestUri, true));
+            $info .= sprintf('<li><strong>method:</strong>%s</li>', var_export($this->method, true));
+            $info .= sprintf('<li><strong>userAgent:</strong>%s</li>', var_export($this->userAgent, true));
+            $info .= sprintf('<li><strong>acceptContents:</strong>%s</li>', var_export($this->acceptContents, true));
+            $info .= sprintf('<li><strong>acceptCharsets:</strong>%s</li>', var_export($this->acceptCharset, true));
+            $info .= sprintf('<li><strong>acceptLanguages:</strong>%s</li>', var_export($this->acceptLanguages, true));
+            return $info .'</ul>';
+        }
+
         private function __construct($parameters = null) {
             if ($parameters !== null)
                 $this->parameters = $parameters;
             else
                 $this->parameters = array_merge($_GET, $_POST);
 
-            if (isset ($this->parameters['_method'])) {
+            if (isset($this->parameters['_method'])) {
                 $this->method = strtoupper($this->parameters['_method']);
                 unset($this->parameters['_method']);
-            } else
+            } elseif (isset($_SERVER['REQUEST_METHOD']))
                 $this->method = $_SERVER['REQUEST_METHOD'];
+            else
+                $this->method = 'GET';
 
             if (isset ($this->parameters['_action'])) {
                 $this->action = $this->parameters['_action'];
@@ -171,7 +185,7 @@
 
             $this->files = $_FILES;
 
-            $this->requestUri = sprintf('http%s://%s%s%s', (isset($_SERVER['HTTPS'])?'s':''),
+            $this->requestUri = sprintf('http%s://%s%s%s', ((isset($_SERVER['HTTPS']) && ($_SERVER['HTTPS'] != 'off'))?'s':''),
                                         $_SERVER['HTTP_HOST'],
                                         $_SERVER['REQUEST_URI'],
                                         ($_SERVER['QUERY_STRING']!='')? '?'.$_SERVER['QUERY_STRING']: '');
@@ -198,11 +212,15 @@
             }
             krsort($this->acceptContents);
 
-            $temp = explode(';', $_SERVER['HTTP_ACCEPT_LANGUAGE']);
-            $this->acceptLanguages = explode(',', $temp[0]);
+            if (isset ($_SERVER['HTTP_ACCEPT_LANGUAGE'])) {
+                $temp = explode(';', $_SERVER['HTTP_ACCEPT_LANGUAGE']);
+                $this->acceptLanguages = explode(',', $temp[0]);
+            }
 
-            $temp = explode(';', $_SERVER['HTTP_ACCEPT_CHARSET']);
-            $this->acceptCharset = explode(',', $temp[0]);
+            if (isset ($_SERVER['HTTP_ACCEPT_CHARSET'])) {
+                $temp = explode(';', $_SERVER['HTTP_ACCEPT_CHARSET']);
+                $this->acceptCharset = explode(',', $temp[0]);
+            }
         }
     }
 ?>

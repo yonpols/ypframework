@@ -11,10 +11,11 @@
             }
 
             $fileNameExtensions = explode('.', $fileName);
-            array_shift($fileNameExtensions); array_pop($fileNameExtensions);
+            array_shift($fileNameExtensions); 
 
             $filters = 0;
             foreach($fileNameExtensions as $extension) {
+
                 $className = YPFramework::camelize($extension.'_content_filter');
                 $classFileName = YPFramework::getClassPath($className, '', 'extensions/filters');
 

@@ -315,11 +315,12 @@
                     if (!$this->command($model['post_install_sql']))
                         return false;
 
-                $sql = sprintf("INSERT INTO ypf_schema_history (version, table_name, schema_desc) VALUES ('%s', '%s', '%s')",
+                $sql = sprintf("INSERT INTO ypf_schema_history (version, table_name, schema_desc) VALUES ('%s', '%s', '%s');",
                                 $this->sqlEscaped($version),
                                 $this->sqlEscaped($model['name']),
                                 $this->sqlEscaped(serialize($model)));
                 $this->command($sql);
+
                 Logger::framework('INFO:DB:INSTALL', sprintf('Installing: %s to version %s', $model['name'], $version));
                 return true;
             }

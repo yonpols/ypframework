@@ -1,6 +1,8 @@
+#package section in order to be compatible with YPInfrastructure
+#see config.yml from ypinfrastructure for details about package section
 package:
   type: application
-  name: {{application_name}}
+  name: '{{application_name}}'
   version: 0.0.1
   author: 'Name of the author'
   description: 'Text of description'
@@ -11,47 +13,70 @@ package:
       captcha: '0.0.1'
     lib:
 
+#Custom paths. YPFramework defines the following paths when sarting, which you can
+#use to build your own custom paths:
+#  app -> application base path.
+#  ypf -> ypframework path
+#  www -> public www files path. Generally APP_PATH/www
+#  log -> log files path         Generally APP_PATH/support/log
+#  tmp -> temporary files path.  Generally APP_PATH/support/tmp
+#         below this path you can find compiled templates and caches
 paths:
   db: '{%paths.app}/support/db'
 
-#To force execution mode uncomment this line and change it to the correct value
-#mode: development
+#YPFramework can run different configurations for one application. This is
+#called an environment. You can use any name that you want except for one rule.
+#YPFramework will assume that any environment whose name is not "production" is
+#a development environment applying some default settings. On the other hand, it
+#will consider the environment "production" as the one meant to be on production systems.
+#environments is mandatory
 
-plugins:
+#You can force YPFramework to start working in a specified environment
+#mode: 'production'
+
+environments:
   development:
+    #application is a mandatory section
+    application:
+      title: '{{application_human_name}}'
+      url: 'http://localhost/{{application_name}}'
+      root: '/home'
 
-  production:
-    #sesion_db:
-    #  version: '1.0' # >1.0 ó >= 1.0
-      #path:
-      #git:
-    #captcha: '1.0'
+    #If you need your application to connect to databases you must set at least one connection
+    #currently YPFramework accepts MySQL and SQLite databases.
+    #Each connection must have a name and "main" is mandatory and will be the default database used.
+    databases:
+      main:
+        type: SQLite2
+        name: '{%paths.db}/development.db'
 
-application:
-  development:
-    title: '{{application_human_name}}'
-    url: 'http://localhost/{{application_name}}'
-    root: '/home'
-    pack_media: true
-    pretty_url: true
-    profile: true
+    #Routes are entry points to your application. Any request sent to the server that is not a
+    #file under www path nor a route defined here, will be rejected.
+    routes:
+      home:
+        match: '/home(.:format)'
+        controller: 'home'
+        action: 'index'
+        method: 'get'
 
-  production:
-    title: '{{application_human_name}}'
-    url: 'http://{{application_name}}.com'
-    root: '/home'
-    pack_media: false
-    pretty_url: true
-    profile: true
+    #Plugins to load. If you omit this setting, YPF will load all plugins on extensions/plugins dir,
+    #otherwise it will load only those mentioned here.
+    plugins: []
+      #this means don't load plugins at all.
 
-    minify_output: true
+    #plugin_name:
+    #  setting_1: value
 
-routes:
-  home:
-    match: '/home(.:format)'
-    controller: 'home'
-    action: 'index'
-    method: 'get'
+  #Environments can inherit settings from other envirnonments when you append a colon :
+  #and the name of a previous environment.
+  production:development:
+    application:
+      url: 'http://{{application_name}}.com'
+    databases:
+      main:
+        name: '{%paths.db}/production.db'
+
+
 
 #  noaction:
 #    match: '/:controller(.:format)'
@@ -59,14 +84,3 @@ routes:
 
 #  default:
 #    match: '/(:controller(/:action(/:id)))(.:format)'
-
-databases:
-  #One database configuration for each application mode
-  development:
-    type: SQLite2
-    name: '{%paths.db}/development.db'
-
-  production:
-    type: SQLite2
-    name: '{%paths.db}/production.db'
-

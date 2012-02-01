@@ -1,4 +1,27 @@
 <?php
+    function request_uri() {
+        $uri = 'http';
+
+        if (isset ($_SERVER['HTTPS']) && $_SERVER['HTTPS'] != 'off')
+            $uri .= 's';
+
+        $uri .= sprintf('://%s', $_SERVER['HTTP_HOST']);
+        if ($_SERVER['SERVER_PORT'] != '80')
+            $uri .= ':'.$_SERVER['SERVER_PORT'];
+        $uri .= $_SERVER['PHP_SELF'];
+
+        return $uri;
+    }
+
+    function is_cli() {
+         if(php_sapi_name() == 'cli' && empty($_SERVER['REMOTE_ADDR'])) {
+              return true;
+         } else {
+              return false;
+         }
+    }
+
+
     function get($index, $value = NULL)
 	{
 		if (isset($_GET[$index]))
@@ -59,4 +82,27 @@
 
         return $equal && empty($a2);
     }
+
+    function array_merge_deep($a1, $a2)
+    {
+        if (is_array($a1) && is_array($a2)) {
+            $result = array();
+
+            foreach($a1 as $k=>$v)
+            {
+                if (isset($a2[$k])) {
+                    $result[$k] = array_merge_deep ($v, $a2[$k]);
+                    unset($a2[$k]);
+                } else
+                    $result[$k] = $v;
+            }
+
+            foreach($a2 as $k=>$v)
+                $result[$k] = $v;
+
+            return $result;
+        } else
+            return $a2;
+    }
+
 ?>

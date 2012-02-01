@@ -6,11 +6,17 @@
 
             //Install ypf command
             $destFileName = getFileName(BIN_PATH, 'ypf');
-            if (file_exists($destFileName))
-                $destFileName .= '-'.$version;
+
+            $destFileNameVersion =  $destFileName.'-'.$version;
 
             $srcFileName = getFileName($packagePath, 'bin/ypf');
-            $result = symlink($srcFileName, $destFileName) && chmod($srcFileName, 0555);
+
+            if (file_exists($destFileName))
+                @unlink($destFileName);
+
+            $result = symlink($srcFileName, $destFileName) &&
+                      symlink($srcFileName, $destFileNameVersion) &&
+                      chmod($srcFileName, 0555);
             if ($result)
                 YPILogger::log ('INFO', sprintf ('YPFramework version %s: installed ypf command', $version));
             else

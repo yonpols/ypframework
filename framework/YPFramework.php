@@ -1,7 +1,14 @@
 <?php
-    class YPFramework extends YPFObject implements Initializable
+    class YPFramework extends YPFObject
     {
-        //Base paths for components: controllers, models, views, filters, helpers
+        //Framework and application paths
+        private static $paths;
+        private static $package;
+
+        //Class source paths
+        private static $classSources = array();
+
+        //Base paths for components: controllers, models, views, extensions
         private static $applicationComponentPaths = array();
 
         //Base paths of loaded plugins
@@ -13,6 +20,7 @@
         //Connected databases
         private static $databases = array();
 
+        //Current application instance
         private static $application = null;
 
         //Working mode
@@ -20,13 +28,15 @@
         private static $development = true;
         private static $production = false;
 
+        //Framework initialization method. Must be called before any application object initialization
         public static function initialize() {
             //Initialize cache manager
             YPFCache::initialize();
 
             //Set up basic framework/application paths
-            $root = new YPFObject();
-            $root->paths = new YPFObject();
+            $root = new YPFObject;
+            self::$paths = new YPFObject;
+            $root->paths = self::$paths;
             $root->paths->app = realpath(APP_PATH);
             $root->paths->ypf = realpath(YPF_PATH);
             $root->paths->www = realpath(WWW_PATH);
@@ -51,15 +61,26 @@
             }
 
             $root = self::$configuration->getRoot();
+            self::$package = isset($root->package)? $root->package: new YPFObject;
 
             //Set up searching paths
             self::$applicationComponentPaths = array(
-                $root->paths->app
+                $root->paths->app,
+                $root->paths->ypf
+            );
+
+            self::$classSources = array(
+                'controller' => 'controllers',
+                'command' => 'extensions/commands',
+                'filter' => 'extensions/filters',
+                'route' => 'extensions/routes'
             );
 
             //Determine working mode
             if (isset($_SERVER['YPF_MODE']))
                 self::$mode = $_SERVER['YPF_MODE'];
+            elseif (isset($_ENV['YPF_MODE']))
+                self::$mode = $_ENV['YPF_MODE'];
             elseif (isset($root->mode))
                 self::$mode = $root->mode;
             else
@@ -71,9 +92,12 @@
                 self::$production = true;
             }
 
-            //Load application plugins
-            self::loadPlugins(self::getSetting('plugins'));
-            self::$applicationComponentPaths[] = $root->paths->ypf;
+            if (self::$application !== false) {
+                //Load application plugins
+                self::loadPlugins(self::getSetting('plugins'));
+            } else
+                self::loadPlugins();
+
 
             //Load framework, application and plugins helpers
             self::loadHelpers();
@@ -81,14 +105,22 @@
             Logger::initialize();
         }
 
+        //TODO This method is intended to close everything openend
         public static function finalize() {
             YPFCache::finalize();
             Logger::finalize();
         }
 
+        //This method runs the framework per request.
+        //TODO test if it can be run without finalizing
         public static function run() {
             try
             {
+                Application::initialize();
+                Controller::initialize();
+                Model::initialize();
+                View::initialize();
+
                 self::$application = new Application();
                 self::$application->run();
                 self::finalize();
@@ -96,17 +128,78 @@
             catch (EndResponse $e) {
                 self::finalize();
             }
-            catch (Exception $e)
+        }
+
+        //Public data methods about the framework and application ==============
+
+        //Get a setting from configuration.
+        public static function getSetting($path, $default=null) {
+            $parts = explode('.', $path);
+
+            $root = self::$configuration->getRoot()->environments->{self::$mode};
+
+            foreach ($parts as $p)
             {
-                if (!($e instanceof BaseError))
-                    Logger::framework('ERROR', $e->getMessage()."\n\t".$e->getTraceAsString());
-
-                if (!self::$development)
-                    ob_clean();
-
-                //header($_SERVER['SERVER_PROTOCOL'] . ' 500 Internal Server Error', true, 500);
-                echo $e->getMessage()."\n".$e->getTraceAsString();
+                if (!isset($root->{$p}))
+                    return $default;
+                else
+                    $root = $root->{$p};
             }
+
+            return $root;
+        }
+
+        //Get a database connection instance
+        public static function getDatabase($name = 'main')
+        {
+            $mode = self::$mode.'-'.$name;
+
+            if (isset(self::$databases[$mode]))
+                return self::$databases[$mode];
+
+            if (!($config = self::getSetting('databases.'.$name)))
+                return null;
+
+            if (!isset($config->type))
+                return null;
+
+            $driverFileName = self::getFileName(self::$paths->ypf, 'framework/databases', $config->type.'.php');
+            if (file_exists($driverFileName))
+            {
+                require_once $driverFileName;
+                $className = $config->type."DataBase";
+                self::$databases[$mode] = new $className($config);
+                return self::$databases[$mode];
+            } else
+                throw new ErrorComponentNotFound ('DB:DRIVER', $config->type);
+        }
+
+        public static function getApplication()
+        {
+            return self::$application;
+        }
+
+        public static function getPaths() {
+            return self::$paths;
+        }
+
+        public static function getPackage() {
+            return self::$package;
+        }
+
+        public static function getMode()
+        {
+            return self::$mode;
+        }
+
+        public static function inDevelopment()
+        {
+            return self::$development;
+        }
+
+        public static function inProduction()
+        {
+            return self::$production;
         }
 
         public static function getControllerInstance($controllerName) {
@@ -136,105 +229,6 @@
                 return new $className(self::$application);
             } else
                 throw new ErrorComponentNotFound ('Controller', $className);
-        }
-
-        public static function getSetting($path, $default=null) {
-            $parts = explode('.', $path);
-
-            $root = self::$configuration->getRoot();
-
-            if (!isset($root->{$parts[0]}))
-                return $default;
-            else
-                $root = $root->{$parts[0]};
-
-            if (array_search($parts[0], array('application', 'databases', 'plugins')) !== false) {
-                if (!isset($root->{self::$mode}))
-                    return $default;
-                else
-                    $root = $root->{self::$mode};
-            }
-
-            array_shift($parts);
-
-            foreach ($parts as $p)
-            {
-                if (!isset($root->{$p}))
-                    return $default;
-                else
-                    $root = $root->{$p};
-            }
-
-            return $root;
-        }
-
-        public static function getFileName()
-        {
-            $filePath = '';
-
-            foreach (func_get_args() as $path)
-            {
-                if ($path == '')
-                    continue;
-
-                if (substr($path, -1) != '/')
-                    $filePath .= $path . '/';
-                else
-                    $filePath .= $path;
-            }
-
-            if (substr($filePath, -1) == '/')
-                return substr($filePath, 0, -1);
-            else
-                return $filePath;
-        }
-
-        public static function getMode()
-        {
-            return self::$mode;
-        }
-
-        public static function inDevelopment()
-        {
-            return self::$development;
-        }
-
-        public static function inProduction()
-        {
-            return self::$production;
-        }
-
-        public static function getApplication()
-        {
-            return self::$application;
-        }
-
-        public static function getDatabase($mode = null)
-        {
-            if ($mode == null)
-                $mode = self::$mode;
-
-            if (isset(self::$databases[$mode]))
-                return self::$databases[$mode];
-
-            $root = self::$configuration->getRoot();
-
-            if (!isset($root->databases->{$mode}))
-                return null;
-
-            $config = $root->databases->{$mode};
-            if (!isset($config->type))
-                return null;
-
-            $driverFileName = self::getFileName($root->paths->ypf, 'framework/databases', $config->type.'.php');
-            if (file_exists($driverFileName))
-            {
-                require_once $driverFileName;
-                $className = $config->type."DataBase";
-                self::$databases[$mode] = new $className($config);
-                return self::$databases[$mode];
-            } else
-                throw new ErrorComponentNotFound ('DB:DRIVER', $config->type);
         }
 
         public static function getClassPath($className, $prefixPath = '', $type = null)
@@ -283,6 +277,26 @@
                 return array_pop($result);
             else
                 return $result;
+        }
+
+        public static function getFileName() {
+            $filePath = '';
+
+            foreach (func_get_args() as $path)
+            {
+                if ($path == '')
+                    continue;
+
+                if (substr($path, -1) != '/')
+                    $filePath .= $path . '/';
+                else
+                    $filePath .= $path;
+            }
+
+            if (substr($filePath, -1) == '/')
+                return substr($filePath, 0, -1);
+            else
+                return $filePath;
         }
 
         public static function underscore($string)
@@ -356,16 +370,15 @@
 
         //======================================================================
 
-        private static function loadPlugins($selectPlugins = null)
-        {
+        private static function loadPlugins($selectPlugins = null) {
             self::$plugins = array();
             $basePath = realpath(self::getFileName(self::$applicationComponentPaths[0], 'extensions/plugins'));
-            $ypfPath = realpath(self::getFileName(self::$configuration->getRoot()->paths->ypf, 'extensions/plugins'));
+            $ypfPath = realpath(self::getFileName(self::$paths->ypf, 'extensions/plugins'));
 
             if ($selectPlugins !== null) {
-                foreach ($selectPlugins as $plugin => $data)
+                foreach ($selectPlugins as $plugin)
                     if (!self::loadPlugin ($plugin, self::getFileName($basePath, $plugin)))
-                        Logger::framework ('ERROR', sprintf("Could not load plugin: %s", $plugin));
+                        throw new ErrorComponentNotFound ('plugin', $plugin);
             } else {
                 $basePath = realpath(self::getFileName(self::$applicationComponentPaths[0], 'extensions/plugins'));
                 if (is_dir($basePath))
@@ -380,7 +393,8 @@
                         if ($dir[0] =='.')
                             continue;
 
-                        self::loadPlugin($dir, $path);
+                        if (!self::loadPlugin($dir, $path))
+                            throw new ErrorComponentNotFound ('plugin', $dir);
                     }
                     closedir($od);
                 }
@@ -398,14 +412,14 @@
                     if ($dir[0] =='.')
                         continue;
 
-                    self::loadPlugin($dir, $path);
+                    if (!self::loadPlugin($dir, $path))
+                        throw new ErrorComponentNotFound ('plugin', $dir);
                 }
                 closedir($od);
             }
         }
 
-        private static function loadPlugin($name, $path)
-        {
+        private static function loadPlugin($name, $path) {
             if (!is_dir($path))
                 return false;
 
@@ -413,7 +427,10 @@
                 throw new BaseError (sprintf("Plugin %s already loaded", $name), 'PLUGIN');
 
             self::$plugins[$name] = $path;
+
+            self::$applicationComponentPaths = array_splice(self::$applicationComponentPaths, 0, -1);
             self::$applicationComponentPaths[] = $path;
+            self::$applicationComponentPaths[] = self::$paths->ypf;
 
             //Plugin has libs to include?
             $libPath = self::getFileName($path, 'lib');
@@ -434,8 +451,7 @@
             return true;
         }
 
-        private static function loadHelpers()
-        {
+        private static function loadHelpers() {
             foreach(self::$applicationComponentPaths as $path)
             {
                 $helpersPath = self::getFileName($path, 'extensions/helpers');
