@@ -1,8 +1,8 @@
 <?php
-    class YPFCache extends YPFObject
-    {
+    class YPFCache extends YPFObject {
         protected static $cachePath;
         protected static $fileBased;
+        protected static $active = true;
 
         public static function initialize() {
             if (defined('YPF_CMD'))
@@ -20,6 +20,9 @@
 
         public static function finalize() { }
 
+        /**
+         * Deletes all cached files
+         */
         public static function invalidate() {
             if (is_dir(self::$fileBased))
             {
@@ -30,7 +33,19 @@
             }
         }
 
+        /**
+         * Gets/sets data in comparison with a file modification date. This
+         * function is useful with data saved in files.
+         *
+         * @param string $fileName name of the original file where data is taken of
+         * @param mixed $value data to be set based on the filename passed
+         * @param boolean $serialize serialize data sent in $value
+         * @return mixed returns false when cache is disabled, data is not cached or file did not change.
+         */
         public static function fileBased($fileName, $value = null, $serialize = true) {
+            if (!YPFramework::getSetting('application.cache', true))
+                return false;
+
             if (defined('YPF_CMD'))
                 return false;
 

@@ -1,11 +1,9 @@
 <?php
-    class YPFConfiguration
-    {
+    class YPFConfiguration {
         protected $root;
         protected $changed = false;
 
-        public function __construct($configFileName=null, $root=null)
-        {
+        public function __construct($configFileName=null, $root=null) {
             if ($root === null)
                 $root = new YPFObject();
             $this->root = $root;
@@ -14,8 +12,7 @@
                 $this->addConfigFile ($configFileName);
         }
 
-        public function addConfigFile($configFileName)
-        {
+        public function addConfigFile($configFileName) {
             if (defined('YPF_CMD') && !file_exists($configFileName))
                 return;
 
@@ -24,11 +21,7 @@
             try
             {
                 $config = $yaml->parse(file_get_contents($configFileName));
-
-                foreach ($config as $name=>$value)
-                    $this->mergeConfig ($this->root, $name, $this->objetize($value));
-
-                $this->changed = true;
+                $this->addConfig($config);
             }
             catch (InvalidArgumentException $e)
             {
@@ -37,8 +30,14 @@
 
         }
 
-        public function getRoot()
-        {
+        public function addConfig($config) {
+            foreach ($config as $name=>$value)
+                $this->mergeConfig ($this->root, $name, $this->objetize($value));
+
+            $this->changed = true;
+        }
+
+        public function getRoot() {
             if ($this->changed)
             {
                 $this->replace($this->root);
@@ -48,8 +47,7 @@
             return $this->root;
         }
 
-        public function isValid()
-        {
+        public function isValid() {
             $root = $this->getRoot();
 
             if (!isset($root->environments))
@@ -61,8 +59,7 @@
             return true;
         }
 
-        private function mergeConfig($parent, $name, $config, $path = '')
-        {
+        private function mergeConfig($parent, $name, $config, $path = '') {
             if (!isset($parent->{$name}))
                 $parent->{$name} = $config;
             elseif ($name != 'package')
@@ -75,8 +72,7 @@
             }
         }
 
-        private function objetize($config)
-        {
+        private function objetize($config) {
             if (is_array($config))
             {
                 $key = array_keys($config);
@@ -104,8 +100,7 @@
                 return $config;
         }
 
-        private function replace(&$object)
-        {
+        private function replace(&$object) {
             if (is_object($object))
                 foreach($object as $key=>$val)
                     $this->replace($object->{$key});
@@ -118,8 +113,7 @@
                 $object = $this->processString ($object);
         }
 
-        private function processString($value)
-        {
+        private function processString($value) {
             while (preg_match('/\\{%([a-z][a-zA-Z0-9_\\.]+)\\}/', $value, $matches, PREG_OFFSET_CAPTURE))
             {
                 $replaced = '$this->root->'.str_replace('.', '->', $matches[1][0]);

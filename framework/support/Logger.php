@@ -1,25 +1,20 @@
 <?php
-    class Logger extends YPFObject
-    {
+    class Logger extends YPFObject {
         private static $frameworkLog = array();
         private static $frameworkLogFileName = null;
         private static $applicationLog = array();
         private static $applicationLogFileName = null;
-        private static $mode;
+        private static $mode = 'development';
+        private static $active = true;
 
-        private static $excludes = array(
-            'development' => array(),
-            'production' => array(
-                'SQL', 'DEBUG'
-            )
-        );
+        private static $excludes = null;
 
         private static $colors = array('ERROR' => 31, 'INFO' => 32, 'NOTICE' => 33, 'DEBUG' => 36, 'ROUTE' => 34, 'SQL' => 35);
 
-        public static function initialize()
-        {
+        public static function initialize() {
             $basePath = YPFramework::getPaths()->log;
             self::$mode = YPFramework::getMode();
+            self::$active = YPFramework::getSetting('application.log.active', true);
 
             if (!defined('YPF_CMD') || YPFramework::getApplication() !== false) {
                 self::$frameworkLogFileName = YPFramework::getFileName($basePath, sprintf('ypf-%s-%s.log', self::$mode, date('Y-m')));
@@ -33,8 +28,12 @@
             self::writeLogs();
         }
 
-        public static function framework($type, $log)
-        {
+        /**
+         * Logs a framework message
+         * @param type $type
+         * @param type $log
+         */
+        public static function framework($type, $log) {
             if (strpos($type, ':') !== false)
                 list($type, $subtype) = explode(':', $type);
             else
@@ -56,8 +55,12 @@
                 self::$frameworkLog[] = $text;
         }
 
-        public static function application($type, $log)
-        {
+        /**
+         * Logs an application message
+         * @param type $type
+         * @param type $log
+         */
+        public static function application($type, $log) {
             if (strpos($type, ':') !== false)
                 list($type, $subtype) = explode(':', $type);
             else
@@ -80,7 +83,7 @@
         }
 
         private static function writeLogs() {
-            if (!defined('YPF_CMD') || YPFramework::getApplication() !== false) {
+            if (self::$active && (!defined('YPF_CMD') || YPFramework::getApplication() !== false)) {
                 if (count(self::$frameworkLog))
                 {
                     if (($fd = @fopen(self::$frameworkLogFileName, "a"))) {
@@ -103,17 +106,25 @@
             }
         }
 
-        private static function getColor($type)
-        {
+        private static function getColor($type) {
             if (isset(self::$colors[$type]))
                 return self::$colors[$type];
             else
                 return 0;
         }
 
-        private static function isExcluded($type)
-        {
-            return (isset(self::$excludes[self::$mode]) && (array_search($type, self::$excludes[self::$mode]) !== false));
+        private static function isExcluded($type) {
+            $excludes = array(
+                'development' => array(),
+                'production' => array(
+                    'SQL', 'DEBUG'
+                )
+            );
+
+            if (self::$excludes === null)
+                self::$excludes = YPFramework::getSetting('application.log.exclude', $excludes[self::$mode]);
+
+            return (array_search($type, self::$excludes) !== false);
         }
     }
 ?>

@@ -1,6 +1,5 @@
 <?php
-    class YPFApplicationBase extends YPFObject
-    {
+    class YPFApplicationBase extends YPFObject {
         protected $output;
         protected $data;
 
@@ -20,9 +19,14 @@
             $routes = YPFramework::getSetting('routes');
             $this->routes = new YPFObject;
 
-            $url = $this->getSetting('url');
+            //Process request
+            $this->request = YPFRequest::get();
+
+            $url = $this->request->getBaseUrl();
+            YPFramework::setSetting('application.url', $url);
+            
             foreach($routes as $name => $data)
-                YPFRoute::get($name, $data, $url, $this->routes);
+                YPFRoute::get($name, $data, $url);
 
             $this->data = new YPFObject();
 
@@ -51,6 +55,9 @@
             }
         }
 
+        /**
+         * Run application to respond to a request
+         */
         public function run() {
             $time_start = microtime(true);
 
@@ -68,7 +75,8 @@
 
                 try
                 {
-                    $controller = YPFramework::getControllerInstance($action['controller']);
+                    $className = YPFramework::camelize($action['controller'].'_controller');
+                    $controller = new $className($this);
                     $controller->processAction(YPFramework::camelize($action['action'], false));
                 } catch (JumpToNextActionException $e) {
 
@@ -94,6 +102,11 @@
             Logger::framework('DEBUG:REQ_RENDER', sprintf('Request rendered (%.2F secs)', ($time_end-$time_start)));
         }
 
+        /**
+         * Forward execution flow to an other controller/action
+         * @param array $action an associative array with the keys action and controller
+         * @param array $params an array of params you want to include in the params list
+         */
         public function forwardTo($action, $params = array()) {
             $this->actions[] = $action;
 
@@ -103,6 +116,14 @@
             throw new JumpToNextActionException();
         }
 
+        /**
+         * Send a mail
+         * @param mixed $to string or array containing recipients
+         * @param string $subject
+         * @param string $text
+         * @param array $params associative array with Mime params
+         * @return mixed returns true or false or the amount of mails sent
+         */
         public function sendEmail($to, $subject, $text, $params = null) {
             if (is_array($to))
             {
@@ -116,6 +137,10 @@
             }
         }
 
+        /**
+         * Redirect client navigator to the url passed
+         * @param string $url
+         */
         public function redirectTo($url=null) {
             if ($this->output->error)
                 $_SESSION['error'] = $this->output->error;
@@ -133,6 +158,12 @@
             return $this->route;
         }
 
+        /**
+         * Get an application setting
+         * @param string $path
+         * @param mixed $default
+         * @return mixed
+         */
         public function getSetting($path, $default=null) {
             return YPFramework::getSetting('application.'.$path, $default);
         }
@@ -154,24 +185,15 @@
         }
 
         private function processRequest() {
-            //Process request
-            $this->request = YPFRequest::get();
-
-            foreach ($this->routes as $route)
-            {
-                if ($route->matches($this->request))
-                {
-                    $this->route = $route;
-                    $this->request->mergeParameters($route->getParameters());
-                    $this->actions = array(
-                        array('controller' => $route->getController(), 'action' => $route->getAction())
-                    );
-
-                    return;
-                }
-            }
-
-            throw new ErrorNoRoute ($this->request->__toString());
+            $route = YPFRouter::matchingRoute($this->request);
+            if ($route) {
+                $this->route = $route;
+                $this->request->mergeParameters($route->getParameters());
+                $this->actions = array(
+                    array('controller' => $route->getController(), 'action' => $route->getAction())
+                );
+            } else
+                throw new ErrorNoRoute ($this->request->__toString());
         }
 
         private function processResponse($controller, $action) {

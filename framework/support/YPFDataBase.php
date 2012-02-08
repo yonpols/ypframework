@@ -9,8 +9,7 @@
 
 		protected $db = NULL;
 
-        public function  __construct($configuration, $connect = true)
-		{
+        public function  __construct($configuration, $connect = true) {
 			$this->host = isset($configuration->host)? $configuration->host: null;
 			$this->dbname = isset($configuration->name)? $configuration->name: null;
 			$this->user = isset($configuration->user)? $configuration->user: null;

@@ -3,6 +3,7 @@
         private $parameters;
         private $files;
 
+        private $baseUrl;
         private $requestUri;
         private $userAgent;
         private $acceptContents;
@@ -48,6 +49,10 @@
 
         public function getRequestUri() {
             return $this->requestUri;
+        }
+
+        public function getBaseUrl() {
+            return $this->baseUrl;
         }
 
         public function getUserAgent() {
@@ -189,6 +194,9 @@
                                         $_SERVER['HTTP_HOST'],
                                         $_SERVER['REQUEST_URI'],
                                         ($_SERVER['QUERY_STRING']!='')? '?'.$_SERVER['QUERY_STRING']: '');
+            $this->baseUrl = dirname(sprintf('http%s://%s%s', ((isset($_SERVER['HTTPS']) && ($_SERVER['HTTPS'] != 'off'))?'s':''),
+                                        $_SERVER['HTTP_HOST'],
+                                        $_SERVER['PHP_SELF']));
             $this->userAgent = $_SERVER['HTTP_USER_AGENT'];
 
             $this->acceptContents = array();

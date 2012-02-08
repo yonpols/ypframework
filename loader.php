@@ -56,10 +56,10 @@
         require APP_PATH.'/support/base/Model.php';
         require APP_PATH.'/support/base/View.php';
     } else {
-        require YPF_PATH.'/new_app/support/base/Application.php';
-        require YPF_PATH.'/new_app/support/base/Controller.php';
-        require YPF_PATH.'/new_app/support/base/Model.php';
-        require YPF_PATH.'/new_app/support/base/View.php';
+        require YPF_PATH.'/new_app/private/support/base/Application.php';
+        require YPF_PATH.'/new_app/private/support/base/Controller.php';
+        require YPF_PATH.'/new_app/private/support/base/Model.php';
+        require YPF_PATH.'/new_app/private/support/base/View.php';
 
         //Load libs
         require YPF_PATH.'/extensions/libs/sfYaml/sfYamlDumper.php';

@@ -30,9 +30,6 @@
 
         //Framework initialization method. Must be called before any application object initialization
         public static function initialize() {
-            //Initialize cache manager
-            YPFCache::initialize();
-
             //Set up basic framework/application paths
             $root = new YPFObject;
             self::$paths = new YPFObject;
@@ -45,22 +42,11 @@
 
             //Load Application configuration
             $configurationFile = YPFramework::getFileName($root->paths->app, 'config.yml');
-            self::$configuration = YPFCache::fileBased($configurationFile);
+            self::$configuration = new YPFConfiguration($configurationFile, $root);
 
-            if (self::$configuration === false)
-            {
-                self::$configuration = new YPFConfiguration($configurationFile, $root);
-                YPFCache::fileBased($configurationFile, self::$configuration);
-            }
+            if (!self::$configuration->isValid() && !defined('YPF_CMD'))
+                throw new NoApplicationError('Application configuration is invalid or incomplete', 'Configuration');
 
-            if (!self::$configuration->isValid()) {
-                if (defined('YPF_CMD'))
-                    self::$application = false;
-                else
-                    throw new NoApplicationError('Application configuration is invalid or incomplete', 'Configuration');
-            }
-
-            $root = self::$configuration->getRoot();
             self::$package = isset($root->package)? $root->package: new YPFObject;
 
             //Set up searching paths
@@ -73,7 +59,8 @@
                 'controller' => 'controllers',
                 'command' => 'extensions/commands',
                 'filter' => 'extensions/filters',
-                'route' => 'extensions/routes'
+                'route' => 'extensions/routes',
+                '*' => 'models'
             );
 
             //Determine working mode
@@ -92,7 +79,7 @@
                 self::$production = true;
             }
 
-            if (self::$application !== false) {
+            if (self::$application) {
                 //Load application plugins
                 self::loadPlugins(self::getSetting('plugins'));
             } else
@@ -101,8 +88,6 @@
 
             //Load framework, application and plugins helpers
             self::loadHelpers();
-
-            Logger::initialize();
         }
 
         //TODO This method is intended to close everything openend
@@ -116,6 +101,10 @@
         public static function run() {
             try
             {
+                //Initialize cache manager
+                YPFCache::initialize();
+                Logger::initialize();
+
                 Application::initialize();
                 Controller::initialize();
                 Model::initialize();
@@ -136,6 +125,12 @@
         public static function getSetting($path, $default=null) {
             $parts = explode('.', $path);
 
+            if (!self::$configuration)
+                return $default;
+
+            if (!isset(self::$configuration->getRoot()->environments))
+                return $default;
+
             $root = self::$configuration->getRoot()->environments->{self::$mode};
 
             foreach ($parts as $p)
@@ -149,9 +144,29 @@
             return $root;
         }
 
+        public static function setSetting($path, $value) {
+            $parts = explode('.', $path);
+
+            if (!self::$configuration)
+                return false;
+
+            if (!isset(self::$configuration->getRoot()->environments))
+                return false;
+
+            $root = self::$configuration->getRoot()->environments->{self::$mode};
+
+            foreach ($parts as $i => $p)
+            {
+                if ($i == (count($parts)-1)) {
+                    $root->{$p} = $value;
+                    return true;
+                } else
+                    $root = $root->{$p};
+            }
+        }
+
         //Get a database connection instance
-        public static function getDatabase($name = 'main')
-        {
+        public static function getDatabase($name = 'main') {
             $mode = self::$mode.'-'.$name;
 
             if (isset(self::$databases[$mode]))
@@ -174,80 +189,39 @@
                 throw new ErrorComponentNotFound ('DB:DRIVER', $config->type);
         }
 
-        public static function getApplication()
-        {
-            return self::$application;
+        //Get a filename for the class name passed.
+        public static function getClassPath($className, &$type = null) {
+            $fileName = str_replace('\\', '/', self::underscore($className));
+            $rpos = strrpos($fileName, '_');
+            if ($rpos !== false)
+                $classSuffix = substr ($fileName, $rpos+1);
+            else
+                $classSuffix = '';
+            $type = $classSuffix;
+
+            $fileName .= '.php';
+
+            if (array_key_exists($classSuffix, self::$classSources))
+                $basePath = self::$classSources[$classSuffix];
+            else
+                $basePath = self::$classSources['*'];
+
+            $baseName = basename($fileName);
+            $prefixPath = self::getFileName($basePath, dirname($fileName));
+
+            return self::getComponentPath($baseName, $prefixPath);
         }
 
-        public static function getPaths() {
-            return self::$paths;
+        //Register a class type source from a class name suffix
+        public static function registerClassSource($type, $path) {
+            if ($type == '*')
+                return false;
+
+            self::$classSources[$type] = $path;
         }
 
-        public static function getPackage() {
-            return self::$package;
-        }
-
-        public static function getMode()
-        {
-            return self::$mode;
-        }
-
-        public static function inDevelopment()
-        {
-            return self::$development;
-        }
-
-        public static function inProduction()
-        {
-            return self::$production;
-        }
-
-        public static function getControllerInstance($controllerName) {
-            if (($pos = strrpos($controllerName, '/')) !== false)
-            {
-                $prefixPath = substr($controllerName, 0, $pos);
-                $controllerName = substr($controllerName, $pos+1);
-            } else
-                $prefixPath = '';
-
-            if (($pos = strrpos($controllerName, ':')) !== false)
-            {
-                $namespace = str_replace(':', '\\', self::camelize(substr($controllerName, 0, $pos)));
-                $controllerName = substr($controllerName, $pos+1);
-            } else
-                $namespace = "";
-
-            $className = self::camelize(preg_replace('/[^A-Za-z_]/', 'A', $controllerName)).'Controller';
-            $classFileName = self::getClassPath($className, $prefixPath, 'controllers');
-
-            if ($classFileName !== false)
-            {
-                $className = $namespace.'\\'.$className;
-
-                require_once $classFileName;
-                $className::initialize();
-                return new $className(self::$application);
-            } else
-                throw new ErrorComponentNotFound ('Controller', $className);
-        }
-
-        public static function getClassPath($className, $prefixPath = '', $type = null)
-        {
-            if ($type === null)
-            {
-                if (substr($className, -10) == 'Controller')
-                    $type = 'controllers';
-                elseif (substr($className, -6) == 'Filter')
-                    $type = 'filters';
-                else
-                    $type = 'models';
-            }
-
-            return self::getComponentPath(self::underscore($className).'.php', self::getFileName($prefixPath, $type));
-        }
-
-        public static function getComponentPath($baseName, $prefixPath = '', $useGlob=false, $allPaths=false)
-        {
+        //Get a path for a generic component in all paths
+        public static function getComponentPath($baseName, $prefixPath = '', $useGlob=false, $allPaths=false) {
             $result = array();
 
             foreach (self::$applicationComponentPaths as $path)
@@ -279,6 +253,32 @@
                 return $result;
         }
 
+        public static function getApplication() {
+            return self::$application;
+        }
+
+        public static function getPaths() {
+            return self::$paths;
+        }
+
+        public static function getPackage() {
+            return self::$package;
+        }
+
+        public static function getMode() {
+            return self::$mode;
+        }
+
+        public static function inDevelopment() {
+            return self::$development;
+        }
+
+        public static function inProduction() {
+            return self::$production;
+        }
+
+        //======================================================================
+        //Util functions
         public static function getFileName() {
             $filePath = '';
 
@@ -299,23 +299,24 @@
                 return $filePath;
         }
 
-        public static function underscore($string)
-        {
+        public static function underscore($string) {
             $result = '';
+            $last = '#';
 
             for ($i = 0; $i < strlen($string); $i++)
             {
-                if (($i > 0) && (strpos('ABCDEFGHIJKLMNOPQRSTUVWXYZ', $string[$i]) !== false))
+                if (($i > 0) && (strpos('ABCDEFGHIJKLMNOPQRSTUVWXYZ', $string[$i]) !== false) &&
+                    (strpos('abcdefghijklmnopqrstuvwxyz', $last) !== false))
                     $result .= '_';
 
-                $result .= strtolower($string[$i]);
+                $last = $string[$i];
+                $result .= strtolower($last);
             }
 
             return $result;
         }
 
-        public static function camelize($string, $firstUp = true)
-        {
+        public static function camelize($string, $firstUp = true) {
             $result = '';
             $last = 0;
 
@@ -338,34 +339,6 @@
             $name = preg_replace('/\\s/', '-', $name);
             preg_replace('/[^a-zA-Z0-9_\\-]/', '', $name);
             return $name;
-        }
-
-        public static function processClassName($name)
-        {
-            if (($pos = strrpos($name, '/')) !== false)
-            {
-                $prefixPath = substr($name, 0, $pos);
-                $name = substr($name, $pos+1);
-            } else
-                $prefixPath = '';
-
-            if (($pos = strrpos($name, ':')) !== false)
-            {
-                $namespace = str_replace(':', '\\', YPFramework::camelize(substr($name, 0, $pos)));
-                $name = substr($name, $pos+1);
-            } else
-            if (($pos = strrpos($name, '\\')) !== false)
-            {
-                $namespace = YPFramework::camelize(substr($name, 0, $pos));
-                $name = substr($name, $pos+1);
-            } else
-                $namespace = "";
-
-            return array(
-                'filePrefix' => $prefixPath,
-                'namespace' => $namespace,
-                'className' => YPFramework::camelize($name)
-            );
         }
 
         //======================================================================
@@ -471,16 +444,14 @@
         }
     }
 
-    function __autoload($className)
-    {
-        $info = YPFramework::processClassName($className);
-
-        $fileName = YPFramework::getClassPath($info['className'], $info['filePrefix']);
+    function __autoload($className) {
+        $fileName = YPFramework::getClassPath($className, $type);
 
         if ($fileName === false)
-            throw new ErrorComponentNotFound ('', $info['namespace'].'\\'.$info['className']);
+            throw new ErrorComponentNotFound ($type, $className);
 
         require $fileName;
-        $className::initialize();
+        if (array_search('initialize', get_class_methods($className)) !== false)
+            $className::initialize();
     }
 ?>

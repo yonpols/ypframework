@@ -39,8 +39,12 @@ environments:
     #application is a mandatory section
     application:
       title: '{{application_human_name}}'
-      url: 'http://localhost/{{application_name}}'
       root: '/home'
+      #enable / disable caching of config files and other resources
+      cache: false
+      log:
+        active: true
+        exclude: []
 
     #If you need your application to connect to databases you must set at least one connection
     #currently YPFramework accepts MySQL and SQLite databases.
@@ -71,7 +75,11 @@ environments:
   #and the name of a previous environment.
   production:development:
     application:
-      url: 'http://{{application_name}}.com'
+      cache: true
+      log:
+        active: true
+        exclude: [SQL, DEBUG]
+
     databases:
       main:
         name: '{%paths.db}/production.db'

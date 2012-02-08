@@ -29,11 +29,11 @@
             if ($result != 0)
                 $this->exitNow (YPFCommand::RESULT_FILES_ERROR, sprintf('can\'t copy files to %s', $name));
 
-            chmod(YPFramework::getFileName($name, 'support/tmp'), 01775);
-            chmod(YPFramework::getFileName($name, 'support/db'), 01775);
-            chmod(YPFramework::getFileName($name, 'support/log'), 01775);
+            chmod(YPFramework::getFileName($name, 'private/support/tmp'), 01775);
+            chmod(YPFramework::getFileName($name, 'private/support/db'), 01775);
+            chmod(YPFramework::getFileName($name, 'private/support/log'), 01775);
 
-            $configFileName = YPFramework::getFileName($name, 'config.yml');
+            $configFileName = YPFramework::getFileName($name, 'private/config.yml');
             $data = array(
                 'application_name' => basename($name),
                 'ypf_version' => YPF_VERSION,
@@ -41,8 +41,11 @@
             );
             $this->getProcessedTemplate($configFileName, $data, $configFileName);
 
-            $indexFileName = YPFramework::getFileName($name, 'www/index.php');
-            $this->getProcessedTemplate($indexFileName, array('ypf_path' => YPF_PATH), $indexFileName);
+            if (!symlink(YPF_PATH, YPFramework::getFileName($name, 'private/ypf')))
+                $this->exitNow (YPFCommand::RESULT_FILES_ERROR, sprintf('can\'t create symlink to YPF on %s/private/ypf', $name));
+
+            if (!symlink(YPFramework::getFileName($name, 'private/support/install.php'), YPFramework::getFileName($name, 'index.php')))
+                $this->exitNow (YPFCommand::RESULT_FILES_ERROR, sprintf('can\'t create symlink to installation', $name));
 
             printf("application %s created successfully\n", basename($name));
             return YPFCommand::RESULT_OK;

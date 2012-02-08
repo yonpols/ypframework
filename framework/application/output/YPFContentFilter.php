@@ -11,22 +11,23 @@
             }
 
             $fileNameExtensions = explode('.', $fileName);
-            array_shift($fileNameExtensions); 
+            array_shift($fileNameExtensions);
 
             $filters = 0;
             foreach($fileNameExtensions as $extension) {
 
                 $className = YPFramework::camelize($extension.'_content_filter');
-                $classFileName = YPFramework::getClassPath($className, '', 'extensions/filters');
 
-                if ($classFileName === false)
+                if (!YPFramework::getClassPath($className))
                     continue;
 
-                require_once $classFileName;
-                $filter = new $className(YPFramework::getApplication());
+                try {
+                    $filter = new $className(YPFramework::getApplication());
+                    $filter->filter($content);
+                    $filters++;
+                } catch (ErrorComponentNotFound $e) {
 
-                $filter->filter($content);
-                $filters++;
+                }
             }
 
             return $filters;

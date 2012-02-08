@@ -69,7 +69,7 @@
                     if (isset($list[$ikey]))
                         $item = $list[$ikey];
                     else {
-                        $item = $class::find($ikey);
+                        $item = $class::find($idata);
                         if (!$item)
                             $item = new $class();
                     }

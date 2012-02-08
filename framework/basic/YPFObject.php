@@ -9,6 +9,11 @@
         private $id = null;
 
         //Mixins================================================================
+        /**
+         * Include class variables and functions to this class
+         * @param string $className
+         * @return boolean returns true if the class was included
+         */
         public static function __include($className) {
             $baseClass = get_called_class();
 

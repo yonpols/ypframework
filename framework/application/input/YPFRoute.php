@@ -1,6 +1,5 @@
 <?php
-    class YPFRoute
-    {
+    class YPFRoute {
         private $name;
         private $match;
         private $method;
@@ -18,26 +17,15 @@
         private $baseParameters;
         private $parameters;
 
-        public static function get($name, $config, $baseUrl, $parent) {
+        public static function get($name, $config, $baseUrl) {
             if (!isset($config->type))
                 $config->type = 'basic';
 
             $class_name = YPFramework::camelize($config->type . '_route');
-
-            if (!class_exists($class_name, false)) {
-                $class_filename = YPFramework::getClassPath($class_name, 'extensions', 'routers');
-
-                if (!file_exists($class_filename))
-                    throw new ErrorComponentNotFound ('router', $class_name);
-
-                require $class_filename;
-            }
-
-            return new $class_name($name, $config, $baseUrl, $parent);
+            return new $class_name($name, $config, $baseUrl);
         }
 
-        protected function __construct($name, $config, $baseUrl, $parent)
-        {
+        protected function __construct($name, $config, $baseUrl) {
             if (!isset($config->match))
                 throw new BaseError("No 'match' rule found in route: $name");
 
@@ -112,12 +100,9 @@
             $this->pattern = '/^'.$rule.'$/';
             $this->config = $config;
             $this->config->name = $name;
-
-            $parent->{$name} = $this;
         }
 
-        public function matches(YPFRequest $request)
-        {
+        public function matches(YPFRequest $request) {
             if (preg_match($this->pattern, $request->getAction(), $matches, PREG_OFFSET_CAPTURE))
             {
                 if (($this->method === null) || (array_search($request->getMethod(), $this->method) !== false))
@@ -139,8 +124,7 @@
             return false;
         }
 
-        public function path($params = array())
-        {
+        public function path($params = array()) {
             if (is_object($params))
                 $params = array('id' => $params);
 
@@ -249,6 +233,46 @@
             foreach ($this->parameters as $key => $val)
             $info .= sprintf('<li><strong>%s:</strong> %s</li>', $key, $val);
             return $info .'</ul>';
+        }
+    }
+
+    class YPFRouter extends YPFObject {
+        private static $router = null;
+
+        private $routes = array();
+
+        public static function get() {
+            if (self::$router === null)
+                self::$router = new YPFRouter();
+
+            return self::$router;
+        }
+
+        public static function register($name, $route) {
+            self::get()->registerRoute($name, $route);
+        }
+
+        public static function matchingRoute($request) {
+            $instance = self::get();
+
+            foreach ($instance->routes as $route)
+            {
+                if ($route->matches($request))
+                    return $route;
+            }
+
+            return false;
+        }
+
+        public function __call($name, $arguments) {
+            if (isset($this->routes[$name]))
+                return call_user_func_array (array($this->routes[$name], 'path'), $arguments);
+            else
+                return false;
+        }
+
+        private function registerRoute($name, $route) {
+            $this->routes[$name] = $route;
         }
     }
 ?>

@@ -36,15 +36,7 @@
                 $className = self::$registeredFormatFilters[$formats];
 
             //Prepare output filter
-            $classFileName = YPFramework::getClassPath($className, '', 'extensions/filters');
-            if ($classFileName !== false)
-            {
-                require_once $classFileName;
-                return new $className($application, $controller, $action);
-            } else
-                throw new ErrorComponentNotFound ('Filter', $className);
-
-            return false;
+            return new $className($application, $controller, $action);
         }
 
         public function __construct(Application $application, $controller, $action) {

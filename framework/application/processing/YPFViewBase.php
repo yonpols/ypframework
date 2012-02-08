@@ -1,6 +1,5 @@
 <?php
-    class YPFViewBase extends YPFObject
-    {
+    class YPFViewBase extends YPFObject {
         protected $templateFileName;
         protected $compiledFileName;
 
@@ -107,44 +106,6 @@
         public function getOutputType() {
             return $this->outputType;
         }
-
-
-                /*
-
-        protected function minify() {
-            $time_start = microtime(true);
-            $length_start = strlen($this->output);
-
-            switch ($this->outputType)
-            {
-                case 'text/css':
-                    require_once 'Minify/CSS.php';
-                    $this->output = Minify_CSS::minify($this->output);
-                    break;
-
-                case 'text/javascript':
-                case 'application/x-javascript':
-                    require_once 'JSMin/JSMin.php';
-                    $this->output = JSMin::minify($this->output);
-                    break;
-
-                case 'text/html':
-                case 'text/xhtml':
-                    require_once 'Minify/HTML.php';
-                    require_once 'Minify/CSS.php';
-                    require_once 'JSMin/JSMin.php';
-                    $this->output = Minify_HTML::minify($this->output, array(
-                        'cssMinifier' => array('Minify_CSS', 'minify'),
-                        'jsMinifier' => array('JSMin', 'minify')
-                    ));
-                    break;
-            }
-
-            $time_end = microtime(true);
-            $length_end = strlen($this->output);
-            Logger::framework('DEBUG:MINIFY', sprintf('%s content minified %.2F%%. (%.2F secs)',
-                $this->outputType, (100-(($length_start)? $length_end/$length_start: 0)), ($time_end-$time_start)));
-        }*/
 
         private function getTemplateFile($viewName) {
             $templateFiles = array();

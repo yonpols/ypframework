@@ -1034,6 +1034,9 @@
             $params->relationObjects =  new YPFObject();
             $params->tableMetaData = $model::$database->getTableFields($params->tableName);
 
+            if (!$params->tableMetaData)
+                throw new ErrorDataModel ($model, 'Couldn\'t load table metadata');
+
             YPFModelBase::$modelParams->{$model} = $params;
             $params->modelQuery = new YPFModelQuery($model::$database, $model);
         }
