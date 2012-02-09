@@ -24,7 +24,7 @@
 
             $url = $this->request->getBaseUrl();
             YPFramework::setSetting('application.url', $url);
-            
+
             foreach($routes as $name => $data)
                 YPFRoute::get($name, $data, $url);
 
@@ -89,7 +89,7 @@
             }
 
             //Prepare view name
-            $controllerPrefix = YPFramework::underscore($controller->getName());
+            $controllerPrefix = str_replace('\\', '/', YPFramework::underscore($controller->getName()));
             if ($this->output->viewName == '')
                 $this->output->viewName = YPFramework::getFileName($controllerPrefix, $lastAction['action']);
             if (strpos($this->output->viewName, '/') === false)

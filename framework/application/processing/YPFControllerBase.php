@@ -14,8 +14,8 @@
             parent::__construct();
 
             $name = get_class($this);
-            if (($pos = strrpos($name, '\\')) !== false)
-                $name = substr($name, $pos+1);
+/*            if (($pos = strrpos($name, '\\')) !== false)
+                $name = substr($name, $pos+1);*/
 
             $this->name = substr($name, 0, -10);
             $this->application = $application;
@@ -97,7 +97,7 @@
                                     isset($options['profile'])? $options['profile']: $this->output->profile);
 
                     if (strpos($template, '/') === false)
-                        $template = $this->name.'/'.$template;
+                        $template = str_replace('\\', '/', $this->name).'/'.$template;
 
                     return $view->render($template);
                 }

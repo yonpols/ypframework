@@ -57,7 +57,11 @@
         protected function requirePackage($types) {
             $found = false;
             $types = func_get_args();
-            $package_type = YPFramework::getPackage()->type;
+
+            if (isset(YPFramework::getPackage()->type))
+                $package_type = YPFramework::getPackage()->type;
+            else
+                $package_type = null;
 
             foreach($types as $type)
                 if ($package_type == $type) {

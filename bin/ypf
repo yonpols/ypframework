@@ -10,6 +10,7 @@
 
     try {
         require realpath(dirname(__FILE__).'/../loader.php');
+        require YPF_PATH.'/framework/support/YPFCommand.php';
     } catch (NoApplicationError $error) {
     }
 

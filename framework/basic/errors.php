@@ -93,7 +93,8 @@ EOF;
     }
 
     function php_error_catcher($errno, $errstr, $errfile = null, $errline = null) {
-        if (error_reporting() == 0)
+        $error = error_reporting() & $errno;
+        if ($errno != $error)
             return;
 
         if (class_exists('YPFramework'))
@@ -111,6 +112,7 @@ EOF;
             output_error(false, $exception->getMessage(), $exception->getTraceAsString());
     }
 
+    error_reporting(error_reporting() & ~E_DEPRECATED);
     set_error_handler('php_error_catcher');
     set_exception_handler('php_exception_catcher')
 ?>

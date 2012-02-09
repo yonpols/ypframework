@@ -23,8 +23,6 @@
     //Support classes
     require YPF_PATH.'/framework/support/YPFCache.php';
     require YPF_PATH.'/framework/support/YPFDataBase.php';
-    require YPF_PATH.'/framework/support/YPFTest.php';
-    require YPF_PATH.'/framework/support/YPFCommand.php';
     require YPF_PATH.'/framework/support/Logger.php';
     require YPF_PATH.'/framework/support/Mime.php';
 
