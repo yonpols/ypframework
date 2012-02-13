@@ -25,8 +25,8 @@
          * is called when the command is run. It must return YPFCommand::RESULT_OK
          * if finished succesfully.
          *
-         * $parameters is an array with parameters passed to the command. This array
-         * does not contain parameters passed to ypf
+         * @param   array   $parameters Is an array with parameters passed to the command. This array does not contain parameters passed to ypf
+         * @return  int     Must return an integer to be passed to the shell
          */
         public abstract function run($parameters);
 
@@ -35,15 +35,16 @@
          * is called when the help command is called. It's intended to
          * print some help about the command on the screen.
          *
-         * $parameters is an array with parameters passed to the command. This array
-         * does not contain parameters passed to ypf
+         * @param   array   $parameters Is an array with parameters passed to the command. This array does not contain parameters passed to ypf
          */
         public abstract function help($parameters);
 
         /**
          * Method that a command class must implement. This method
-         * must return a breif description of the command that will be
+         * must return a brief description of the command that will be
          * printed when the command list is printed on scren.
+         *
+         * @return  string
          */
         public abstract function getDescription();
 
@@ -51,6 +52,7 @@
          * Require that the command is called in a directory with a YPI package
          * of type $types or other. This function can be called with more than
          * one parameter to require a package of one type or other.
+         * 
          * @param string $types
          * @return boolean
          */
