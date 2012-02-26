@@ -37,6 +37,13 @@
             $this->method = null;
             $this->baseUrl = $baseUrl;
 
+            if (isset($config->prefix)) {
+                $prefix = $config->prefix;
+                if (substr($prefix, -1) == '/') $prefix = substr($prefix, 0, -1);
+
+                $this->match = $prefix . $this->match;
+            }
+
             if (isset($config->method))
             {
                 if (is_array($config->method))
@@ -56,6 +63,7 @@
             unset($this->baseParameters['controller']);
             unset($this->baseParameters['action']);
             unset($this->baseParameters['format']);
+            unset($this->baseParameters['prefix']);
 
             if ($this->match[0] == '/')
                 $rule = substr($this->match, 1);
@@ -191,7 +199,7 @@
             if ($path[0] == '/')
                 $path = substr($path, 1);
 
-            $pretty_url = YPFramework::getSetting('application.pretty_url');
+            $pretty_url = YPFramework::getSetting('application.pretty_url', true);
             if ($pretty_url === true)
                 return YPFramework::getFileName($this->baseUrl, $path);
             elseif ($pretty_url === false)
@@ -221,10 +229,20 @@
         }
 
         public function __get($name) {
-            if (isset($this->config->{$name}))
+            if (isset($this->parameters[$name]))
+                return $this->parameters[$name];
+            elseif (isset($this->config->{$name}))
                 return $this->config->{$name};
             else
                 return null;
+        }
+
+        public function __isset($name) {
+            return isset($this->config->{$name}) || isset($this->parameters[$name]);
+        }
+
+        public function __toString() {
+            return $this->path();
         }
 
         public function getDebugInfo() {
@@ -233,6 +251,10 @@
             foreach ($this->parameters as $key => $val)
             $info .= sprintf('<li><strong>%s:</strong> %s</li>', $key, $val);
             return $info .'</ul>';
+        }
+
+        public function is($route) {
+            return $this == $route;
         }
     }
 
@@ -269,6 +291,15 @@
                 return call_user_func_array (array($this->routes[$name], 'path'), $arguments);
             else
                 return false;
+        }
+
+        public function __get($name) {
+            if (isset($this->routes[$name]))
+                return $this->routes[$name];
+        }
+
+        public function all() {
+            return $this->routes;
         }
 
         private function registerRoute($name, $route) {

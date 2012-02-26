@@ -77,6 +77,8 @@
 
             $time_end = microtime(true);
             Logger::framework('DEBUG:ACT_RENDER', sprintf('Action rendered (%.2F secs)', ($time_end-$time_start)));
+
+            return $this->data;
         }
 
         protected function param($name, $default = null) {

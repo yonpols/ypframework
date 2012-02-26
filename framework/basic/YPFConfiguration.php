@@ -12,22 +12,31 @@
                 $this->addConfigFile ($configFileName);
         }
 
-        public function addConfigFile($configFileName) {
+        public function addConfigFile($configFileName, $root = null) {
             if (defined('YPF_CMD') && !file_exists($configFileName))
                 return;
 
-            $yaml = new sfYamlParser();
+            if ($root === null)
+                $root = $this->root;
 
-            try
-            {
-                $config = $yaml->parse(file_get_contents($configFileName));
-                $this->addConfig($config);
+            if (strtolower(substr($configFileName, -4)) == '.php')
+                $config = require $configFileName;
+            else {
+                $yaml = new sfYamlParser();
+
+                try {
+                    $config = $yaml->parse(file_get_contents($configFileName));
+                }
+                catch (InvalidArgumentException $e) {
+                    $config = null;
+                }
             }
-            catch (InvalidArgumentException $e)
-            {
+
+            if (!$config)
                 throw new ErrorCorruptFile($configFileName, $e->getMessage());
-            }
 
+            foreach ($config as $name=>$value)
+                $this->mergeConfig ($root, $name, $this->objetize($value));
         }
 
         public function addConfig($config) {
@@ -90,7 +99,9 @@
                         if (($pos = strrpos($key, ':')) !== false) {
                             $copy = substr($key, $pos+1);
                             $key = substr($key, 0, $pos);
-                            $object->{$key} = $this->objetize(array_merge_deep($config[$copy], $val));
+                            if (!isset($object->{$copy}))
+                                throw new BaseError (sprintf('Configuration section %s is not available to be inherited by section %s', $copy, $key));
+                            $object->{$key} = $this->objetize(array_merge_deep($object->{$copy}, $val));
                         } else
                             $object->{$key} = $this->objetize ($val);
                     }

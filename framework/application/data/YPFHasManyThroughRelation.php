@@ -34,17 +34,12 @@
                             $item = new $class();
                     }
 
-                    if ($idata['_delete']) {
-                        if (!$item->isNew())
-                            $item->delete();
-                    } else {
-                        $item->setAttributes($idata);
+                    $item->setAttributes($idata);
 
-                        if ($item->isNew())
-                            $list[$ikey] = $item;
-                        else
-                            $list[$item->getSerializedKey()] = $item;
-                    }
+                    if ($item->isNew())
+                        $list[$ikey] = $item;
+                    else
+                        $list[$item->getSerializedKey()] = $item;
                 }
 
                 $this->setCache($relatorModel, $list);
@@ -92,6 +87,16 @@
 
         public function add($newInstance) {
             $model = $this->relatorModelName;
+
+            $fields = array();
+            foreach($this->relationParams['relatorKeys'] as $index=>$key)
+                $fields[] = sprintf('(%s = %s)', $key, YPFModelBase::getFieldSQLRepresentation($index, $this->relatorInstance->__get($index), $this->relatorModelParams));
+
+            foreach($this->relationParams['relatedKeys'] as $index=>$key)
+                $fields[] = sprintf('(%s = %s)', $key, YPFModelBase::getFieldSQLRepresentation($index, $newInstance->__get($index), $this->relatedModelParams));
+
+            $sql = sprintf('DELETE FROM %s WHERE %s', $this->joinerTable, implode(' AND ', $fields));
+            $model::getDB()->command($sql);
 
             $fields = array();
             $values = array();

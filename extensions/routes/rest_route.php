@@ -1,30 +1,47 @@
 <?php
     class RestRoute extends YPFRoute {
         protected function __construct($name, $config, $baseUrl) {
-            $new_config = new YPFObject;
+            $new_config = clone $config;
 
             if (!isset($config->model))
                 throw new BaseError (sprintf('%s rest route does not define model', $name));
+
+            unset($new_config->type);
+            unset($new_config->model);
 
             $model_params = YPFModelBase::getModelParams(YPFramework::camelize($config->model));
 
             if (!isset($config->root))
                 $root = $model_params->tableName;
-            else
+            else {
                 $root = $config->root;
+                unset($new_config->root);
+            }
 
             if (!isset ($config->controller))
                 $new_config->controller = $model_params->tableName;
             else
                 $new_config->controller = $config->controller;
 
-            if (isset($config->actions))
+            if (isset($config->actions)) {
                 $actions = $config->actions;
-            else
+                unset($new_config->actions);
+            } else
                 $actions = array('index', 'show', 'edit', 'create', 'save', 'delete');
 
             if ($root[0] != '/')
                 $root = '/'.$root;
+
+            if (isset($config->collections)) {
+                $collections = $config->collections;
+                unset($new_config->collections);
+
+                if (isset($config->prefix))
+                    $prefix = YPFramework::getFileName ($config->prefix, substr($root, 1), ':'.YPFramework::underscore($config->model).'_id');
+                else
+                    $prefix = YPFramework::getFileName ($root, ':'.YPFramework::underscore($config->model).'_id');
+            } else
+                $collections = array();
 
             if (array_search('index', $actions) !== false) {
                 $cloned_config = clone $new_config;
@@ -68,6 +85,11 @@
                 $cloned_config->action = 'delete';
                 $cloned_config->method = 'delete';
                 YPFRouter::register('delete_'.$name, YPFRoute::get('delete_'.$name, $cloned_config, $baseUrl));
+            }
+
+            foreach ($collections as $name_col=>$collection) {
+                $collection->prefix = $prefix;
+                YPFRoute::get($name_col.'_'.$name, $collection, $baseUrl);
             }
         }
     }

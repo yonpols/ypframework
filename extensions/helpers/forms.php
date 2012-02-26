@@ -53,7 +53,7 @@
 
     function form_hiddenfield($name, $object = '', $attrs = array())
     {
-        return _form_inputfield('hidden', $name, $object, $attrs);
+        return _form_inputfield('hidden', $name, $object, $attrs, null, false);
     }
 
     function form_filefield($name, $object = '', $attrs = array())
@@ -164,13 +164,13 @@
         return form_textfield($name, $object, array('class'=>'form_field date'));
     }
 
-    function _form_inputfield($type, $name, $object = '', $attrs = array(), $value = null)
+    function _form_inputfield($type, $name, $object = '', $attrs = array(), $value = null, $showError = true)
     {
         $id = _form_fieldname($name, $object, $value, ($type=='text'));
 
-        if (is_object($object) && ($object instanceof Model) && $object->getError($id['field']))
+        if (is_object($object) && ($object instanceof Model) && $object->getError($id['field']) && $showError)
         {
-            $errors = sprintf('<span class="error"><ul><li>%s</li></ul></span>',
+            $errors = sprintf('<div class="error"><ul><li>%s</li></ul></div>',
                 implode('</li><li>', $object->getError($id['field'])));
             $attrs['class'] = (isset($attrs['class'])? $attrs['class']: '').' error';
         } else
@@ -244,7 +244,7 @@
         return array('id' => $id, 'name' => $name, 'field' => $field);
     }
 
-    function form_process_uploaded_file($model, $field, $path)
+    function form_process_uploaded_file($model, $field, $path, $process_function = 'move_uploaded_file')
     {
         $modelName = get_class($model);
 
@@ -270,16 +270,21 @@
             $file_name = preg_replace('/[^\w\-~_\.]+/u', '-', $file_name);
 
             $i = '';
-            while (file_exists($path.$file_name.$i.$extension))
+
+            while (file_exists(YPFramework::getFileName($path, $file_name.$i.$extension)))
                 $i += 1;
 
-            move_uploaded_file($data['tmp_name'], $path.$file_name.$i.$extension);
+            $dest_file = YPFramework::getFileName($path, $file_name.$i.$extension);
+            $process_function($data['tmp_name'], $dest_file);
 
             if (file_exists($path.$model->{$field}))
                 @unlink($path.$model->{$field});
 
             $model->{$field} = $file_name.$i.$extension;
-            $model->{$field.'_tamanio'} = filesize($path.$file_name.$i.$extension);
+
+            if (isset($model->{$field.'_tamanio'}))
+                $model->{$field.'_tamanio'} = filesize($dest_file);
+
             return true;
         }
 

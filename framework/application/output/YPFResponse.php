@@ -75,7 +75,7 @@
         }
 
         private function beginOutput() {
-            ob_end_clean();
+            @ob_end_clean();
 
             if (extension_loaded('zlib'))
                 ob_start('ob_gzhandler');

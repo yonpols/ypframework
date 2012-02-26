@@ -31,6 +31,7 @@
             $sqlGrouping = isset($relationParams['sqlGrouping'])? arraize($relationParams['sqlGrouping']): array();
             $sqlOrdering = isset($relationParams['sqlOrdering'])? arraize($relationParams['sqlOrdering']): array();
             $this->customQueries = isset($relationParams['queries'])? arraize($relationParams['queries']): array();
+            $this->customQueries = array_merge($this->customQueries, $this->relatedModelParams->customQueries);
 
             $model = $this->relatedModelName;
             $this->baseModelQuery = $model::all()->alias($relationName)->where($sqlConditions)->groupBy($sqlGrouping)->orderBy($sqlOrdering);
@@ -53,6 +54,10 @@
             $relation = clone $this;
             $relation->tieToRelator($relatorModel);
             return $relation;
+        }
+
+        public function has($instance) {
+            return ($this->tiedModelQuery->where($instance->getSqlIdConditions($this->tiedModelQuery->getAliasName()))->count() > 0);
         }
 
         public function set($relatorModel, $value)
@@ -211,7 +216,7 @@
 
         public function where($sqlConditions)
         {
-            return $this->tiedModelQuery->where($sqlConditions);
+            return call_user_func_array(array($this->tiedModelQuery, 'where'), func_get_args());
         }
 
         public function join($table, $conditions)

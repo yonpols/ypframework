@@ -46,6 +46,34 @@
                 self::$modelCaches[$modelName] = array();
         }
 
+        public function getAliasName() {
+            return $this->aliasName;
+        }
+
+        public function getSqlFields() {
+            return $this->sqlFields;
+        }
+
+        public function getSqlJoins() {
+            return $this->sqlJoins;
+        }
+
+        public function getSqlConditions() {
+            return $this->sqlConditions;
+        }
+
+        public function getSqlGrouping() {
+            return $this->sqlGrouping;
+        }
+
+        public function getSqlOrdering() {
+            return $this->sqlOrdering;
+        }
+
+        public function getSqlLimit() {
+            return $this->sqlLimit;
+        }
+
         public function fields($fields)
         {
             if (is_string($fields))
@@ -257,10 +285,9 @@
         private function processCustomQuery($name)
         {
             $query = $this->customQueries[$name];
-            $others = array_diff($this->customQueries, array($name=>$query));
 
             $new = $this->copy();
-            $new->customQueries = $others;
+            unset($new->customQueries[$name]);
 
             if (isset($query['sqlConditions']))
                 $new = $new->where($query['sqlConditions']);

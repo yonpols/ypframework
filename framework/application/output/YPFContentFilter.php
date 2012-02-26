@@ -41,10 +41,11 @@
         public final function filter(&$content) {
             if (is_string($content))
                 $content = $this->process($content);
-            else
+            else {
                 foreach ($content as $name => $data) {
                     $content[$name] = $this->process($data);
                 }
+            }
         }
 
         protected abstract function process($content);

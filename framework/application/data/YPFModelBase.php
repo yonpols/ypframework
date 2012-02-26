@@ -157,7 +157,26 @@
                 return null;
         }
 
+        public static final function __callStatic($name, $arguments) {
+            $modelParams = self::getModelParams(get_called_class());
+            return call_user_func_array(array($modelParams->modelQuery, $name), $arguments);
+        }
+
         public final function __set($name, $value) {
+            $className = $this->_modelName;
+
+            $result = true;
+            foreach($className::before('set') as $function)
+                if (is_callable (array($this, $function)))
+                {
+                    if (call_user_func(array($this, $function), $name, $value) === false)
+                        $result = false;
+                }
+                else
+                    throw new ErrorNoCallback(get_class($this), $function);
+            if (!$result)
+                return;
+
             if (isset($this->_modelParams->tableMetaData[$name]))
             {
                 $type = $this->_modelParams->tableMetaData[$name]->Type;
@@ -176,6 +195,14 @@
             }
             elseif (array_key_exists($name, $this->_modelParams->transientFields))
                 $this->_modelData[$name] = $value;
+            else
+                throw new ErrorComponentNotFound ('model property', sprintf('%s::%s', $this->_modelName, $name));
+
+            foreach($className::after('set') as $function)
+                if (is_callable (array($this, $function)))
+                    call_user_func(array($this, $function), $name, $value);
+                else
+                    throw new ErrorNoCallback(get_class($this), $function);
         }
 
         public final function __isset($name) {
@@ -290,10 +317,24 @@
             $total_valid = true;
             $this->_modelErrors = array();
 
+            $action = $this->isNew()? 'create': 'update';
+
             foreach ($this->_modelParams->validations as $field => $validations)
                 foreach($validations as $validation => $parameters)
                 {
                     $validator = "validate_".$validation;
+                    if (is_bool($parameters)) {
+                        if (!$parameters)
+                            continue;
+
+                        $parameters = array();
+                    }
+
+                    if (isset($parameters['only']) && ($parameters['only'] != $action))
+                        continue;
+                    elseif (isset($parameters['except']) && ($parameters['except'] == $action))
+                        continue;
+
                     $valid = $this->$validator($field, $parameters);
                     $total_valid = $total_valid && $valid;
                 }
@@ -303,7 +344,7 @@
 
         public final function loadFromRecord($record) {
             $result = true;
-            $className = get_class();
+            $className = $this->_modelName;
 
             foreach($className::before('load') as $function)
                 if (is_callable (array($this, $function)))
@@ -372,7 +413,7 @@
             }
 
             $result = true;
-            foreach($className::before('after') as $function)
+            foreach($className::after('load') as $function)
                 if (is_callable (array($this, $function)))
                 {
                     if (call_user_func(array($this, $function)) === false)
@@ -590,7 +631,7 @@
             $message = isset($parameters['message'])? $parameters['message']: 'parámetro incorrecto';
             $value = $this->__get($field);
             $function = $parameters['function'];
-            $valid = $function($value);
+            $valid = $function($this, $value);
 
             if (!$valid)
             {
@@ -625,9 +666,6 @@
         }
 
         private function realSave() {
-            if (!$this->_modelModified)
-                return false;
-
             $model = $this->_modelName;
             $result = true;
 
@@ -641,6 +679,9 @@
                     throw new ErrorNoCallback(get_class($this), $function);
 
             if (!$result)
+                return false;
+
+            if (!$this->_modelModified)
                 return false;
 
             if (!$this->isValid())
@@ -795,7 +836,7 @@
             return $result;
         }
 
-        private function getSqlIdConditions($withAlias=true) {
+        public function getSqlIdConditions($withAlias=true) {
             $conditions = array();
 
             if (is_string($withAlias) && (strlen($withAlias) > 0))
@@ -910,15 +951,7 @@
 
         public static function where($sqlConditions) {
             $modelParams = Model::getModelParams(get_called_class());
-            if (func_num_args() > 1) {
-                $conds = array();
-                $parameters = func_get_args();
-
-                for($i = 0; $i < func_num_args(); $i++)
-                    $conds[] = sprintf('$parameters[%d]', $i);
-                return eval(sprintf('return $modelParams->modelQuery->where(%s);', implode(', ', $conds)));
-            } else
-                return $modelParams->modelQuery->where($sqlConditions);
+            return call_user_func_array(array($modelParams->modelQuery, 'where'), func_get_args());
         }
 
         public static function groupBy($sqlGrouping) {
@@ -1035,7 +1068,7 @@
             $params->tableMetaData = $model::$database->getTableFields($params->tableName);
 
             if (!$params->tableMetaData)
-                throw new ErrorDataModel ($model, 'Couldn\'t load table metadata');
+                throw new ErrorDataModel ($model, sprintf('Couldn\'t load table \'%s\' metadata', $params->tableName));
 
             YPFModelBase::$modelParams->{$model} = $params;
             $params->modelQuery = new YPFModelQuery($model::$database, $model);

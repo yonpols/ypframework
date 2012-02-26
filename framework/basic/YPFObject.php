@@ -211,7 +211,7 @@
                 {
                     if (!($v instanceof YPFNoJsonable))
                         $result[$k] = $v->__toJSONRepresentable();
-                } else
+                } elseif ($k != 'id')
                     $result[$k] = $v;
             }
 

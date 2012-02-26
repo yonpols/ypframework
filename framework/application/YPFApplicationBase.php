@@ -17,7 +17,6 @@
 
             $this->paths = YPFramework::getPaths();
             $routes = YPFramework::getSetting('routes');
-            $this->routes = new YPFObject;
 
             //Process request
             $this->request = YPFRequest::get();
@@ -27,6 +26,8 @@
 
             foreach($routes as $name => $data)
                 YPFRoute::get($name, $data, $url);
+
+            $this->routes = YPFRouter::get();
 
             $this->data = new YPFObject();
 
@@ -77,7 +78,7 @@
                 {
                     $className = YPFramework::camelize($action['controller'].'_controller');
                     $controller = new $className($this);
-                    $controller->processAction(YPFramework::camelize($action['action'], false));
+                    $this->data = $controller->processAction(YPFramework::camelize($action['action'], false));
                 } catch (JumpToNextActionException $e) {
 
                 } catch (ErrorMessage $e) {
@@ -144,7 +145,7 @@
         public function redirectTo($url=null) {
             if ($this->output->error)
                 $_SESSION['error'] = $this->output->error;
-            if ($this->notice)
+            if ($this->output->error)
                 $_SESSION['notice'] = $this->output->notice;
 
             if ($url === null)
@@ -189,6 +190,10 @@
             if ($route) {
                 $this->route = $route;
                 $this->request->mergeParameters($route->getParameters());
+
+                if (isset($route->format))
+                    $this->output->format = $route->format;
+
                 $this->actions = array(
                     array('controller' => $route->getController(), 'action' => $route->getAction())
                 );

@@ -411,23 +411,9 @@
          *
          */
         public static function getFileName() {
-            $filePath = '';
+            $filePath = implode(DIRECTORY_SEPARATOR, func_get_args());
 
-            foreach (func_get_args() as $path)
-            {
-                if ($path == '')
-                    continue;
-
-                if ($path[0] == DIRECTORY_SEPARATOR)
-                    $path = substr($path, 1);
-
-                if (substr($path, -1) != DIRECTORY_SEPARATOR)
-                    $path = substr($path, 0, -1);
-
-                    $filePath .= $path.DIRECTORY_SEPARATOR;
-            }
-
-            return substr($filePath, 0, -1);
+            return $filePath;
         }
 
         public static function underscore($string) {
@@ -582,6 +568,10 @@
             throw new ErrorComponentNotFound ($type, $className);
 
         require $fileName;
+
+        if (!class_exists($className, false))
+            throw new ErrorComponentNotFound ($type, $className);
+
         if (array_search('initialize', get_class_methods($className)) !== false)
             $className::initialize();
     }

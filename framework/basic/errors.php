@@ -54,7 +54,7 @@ EOF;
             $template = str_replace('{PAGE_CONTENT}', 'There was an error while executing an application accion. Please try again later.', $template);
             $template = str_replace('{PAGE_FOOTER}', '', $template);
         } else {
-            $template = str_replace('{PAGE_TITLE}', 'Application error', $template);
+            $template = str_replace('{PAGE_TITLE}', 'Application error :: '.YPFramework::getMode(), $template);
 
             $content = sprintf('<h3>Error: %s</h3>', $error_message);
             $content .= str_replace("\n", "<br />", '<code>'.htmlentities($error_trace).'</code>');
