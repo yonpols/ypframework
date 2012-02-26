@@ -258,14 +258,19 @@
         }
     }
 
-    class YPFRouter extends YPFObject {
+    class YPFRouter {
         private static $router = null;
 
         private $routes = array();
 
-        public static function get() {
-            if (self::$router === null)
-                self::$router = new YPFRouter();
+        public static function get($urlBase = '') {
+            if (self::$router === null) {
+                self::$router = YPFCache::fileBased(YPFramework::getConfigurationFile(), null, true, $urlBase);
+                if (!self::$router) {
+                    self::$router = new YPFRouter($urlBase);
+                    YPFCache::fileBased(YPFramework::getConfigurationFile(), self::$router, true, $urlBase);
+                }
+            }
 
             return self::$router;
         }
@@ -286,6 +291,13 @@
             return false;
         }
 
+        private function __construct($urlBase) {
+            self::$router = $this;
+
+            foreach(YPFramework::getSetting('routes') as $name => $data)
+                $this->registerRoute ($name, YPFRoute::get($name, $data, $urlBase));
+        }
+
         public function __call($name, $arguments) {
             if (isset($this->routes[$name]))
                 return call_user_func_array (array($this->routes[$name], 'path'), $arguments);
@@ -303,7 +315,8 @@
         }
 
         private function registerRoute($name, $route) {
-            $this->routes[$name] = $route;
+            if (get_class($route) == 'BasicRoute')
+                $this->routes[$name] = $route;
         }
     }
 ?>

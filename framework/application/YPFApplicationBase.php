@@ -24,10 +24,7 @@
             $url = $this->request->getBaseUrl();
             YPFramework::setSetting('application.url', $url);
 
-            foreach($routes as $name => $data)
-                YPFRoute::get($name, $data, $url);
-
-            $this->routes = YPFRouter::get();
+            $this->routes = YPFRouter::get($url);
 
             $this->data = new YPFObject();
 

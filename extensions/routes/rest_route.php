@@ -89,7 +89,7 @@
 
             foreach ($collections as $name_col=>$collection) {
                 $collection->prefix = $prefix;
-                YPFRoute::get($name_col.'_'.$name, $collection, $baseUrl);
+                YPFRouter::register($name_col.'_'.$name, YPFRoute::get($name_col.'_'.$name, $collection, $baseUrl));
             }
         }
     }

@@ -44,14 +44,14 @@
          * @param boolean $serialize serialize data sent in $value
          * @return mixed returns false when cache is disabled, data is not cached or file did not change.
          */
-        public static function fileBased($fileName, $value = null, $serialize = true) {
+        public static function fileBased($fileName, $value = null, $serialize = true, $sub_section = '') {
             if (!YPFramework::getSetting('application.cache', true))
                 return false;
 
             if (defined('YPF_CMD'))
                 return false;
 
-            $cache_file = YPFramework::getFileName(self::$fileBased, md5($fileName)."-".basename($fileName));
+            $cache_file = YPFramework::getFileName(self::$fileBased, md5($fileName.$sub_section)."-".basename($fileName));
 
             if ($value !== null)
             {

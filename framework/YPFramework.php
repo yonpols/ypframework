@@ -5,21 +5,12 @@
      * This class is not intended to be instantiated.
      */
     class YPFramework extends YPFObject {
-        //Framework and application paths
-        private static $paths;
-        private static $package;
-
-        //Class source paths
-        private static $classSources = array();
-
-        //Base paths for components: controllers, models, views, extensions
-        private static $applicationComponentPaths = array();
-
-        //Base paths of loaded plugins
-        private static $plugins;
-
         //Application + plugin settings
-        private static $configuration;
+        private static $configurationRoot = null;
+        private static $configuration = null;
+        private static $configurationFile = null;
+
+        private static $environment = null;
 
         //Connected databases
         private static $databases = array();
@@ -27,74 +18,103 @@
         //Current application instance
         private static $application = null;
 
-        //Working mode
-        private static $mode = null;
-        private static $development = true;
-        private static $production = false;
-
         /**
          * Framework initialization method. Must be called before any application
          * object initialization
          */
         public static function initialize() {
-            //Set up basic framework/application paths
-            $root = new YPFObject;
-            self::$paths = new YPFObject;
-            $root->paths = self::$paths;
-            $root->paths->app = realpath(APP_PATH);
-            $root->paths->ypf = realpath(YPF_PATH);
-            $root->paths->www = realpath(WWW_PATH);
-            $root->paths->log = self::getFileName($root->paths->app, 'support/log');
-            $root->paths->tmp = self::getFileName($root->paths->app, 'support/tmp');
+            //Initialize cache manager
+            YPFCache::initialize();
 
-            //Load Application configuration
-            $configurationFile = YPFramework::getFileName($root->paths->app, 'config.yml');
-            self::$configuration = new YPFConfiguration($configurationFile, $root);
+            self::$configurationFile = YPFramework::getFileName(APP_PATH, 'config.yml');
+            if (!file_exists(self::$configurationFile))
+                self::$configurationFile = YPFramework::getFileName(APP_PATH, 'config.php');
 
-            if (!self::$configuration->isValid() && !defined('YPF_CMD'))
-                throw new NoApplicationError('Application configuration is invalid or incomplete', 'Configuration');
+            if (file_exists(self::$configurationFile))
+                self::$configuration = YPFCache::fileBased(self::$configurationFile);
 
-            self::$package = isset($root->package)? $root->package: new YPFObject;
+            if (self::$configuration) {
+                self::$configurationRoot = self::$configuration->getRoot();
+                if (self::$configuration && isset(self::$configuration->environments) && isset(self::$configuration->environments->{self::$configurationRoot->mode}))
+                    self::$environment = self::$configuration->environments->{self::$configurationRoot->mode};
+            } else {
+                //Set up basic framework/application paths
+                $root = new YPFObject;
+                self::$configuration = $root;
+                self::$configurationRoot = $root;
 
-            //Set up searching paths
-            self::$applicationComponentPaths = array(
-                $root->paths->app,
-                $root->paths->ypf
-            );
+                $root->paths = new YPFObject;
+                $root->paths->app = realpath(APP_PATH);
+                $root->paths->ypf = realpath(YPF_PATH);
+                $root->paths->www = realpath(WWW_PATH);
+                $root->paths->log = self::getFileName($root->paths->app, 'support/log');
+                $root->paths->tmp = self::getFileName($root->paths->app, 'support/tmp');
 
-            self::$classSources = array(
-                'controller' => 'controllers',
-                'command' => 'extensions/commands',
-                'filter' => 'extensions/filters',
-                'route' => 'extensions/routes',
-                '*' => 'models'
-            );
+                //Set up searching paths
+                $root->applicationComponentPaths = array(
+                    $root->paths->app,
+                    $root->paths->ypf
+                );
 
-            //Determine working mode
-            if (isset($_SERVER['YPF_MODE']))
-                self::$mode = $_SERVER['YPF_MODE'];
-            elseif (isset($_ENV['YPF_MODE']))
-                self::$mode = $_ENV['YPF_MODE'];
-            elseif (isset($root->mode))
-                self::$mode = $root->mode;
-            else
-                self::$mode = 'development';
+                $root->production = false;
+                $root->development = true;
+                $root->mode = 'development';
 
-            if (strpos(self::$mode, 'production') === 0)
-            {
-                self::$development = false;
-                self::$production = true;
+                //Load Application configuration
+                if (self::$configurationFile)
+                    self::$configuration = new YPFConfiguration(self::$configurationFile, $root);
+
+                $root->classSources = array(
+                    'controller' => 'controllers',
+                    'command' => 'extensions/commands',
+                    'filter' => 'extensions/filters',
+                    'route' => 'extensions/routes',
+                    '*' => 'models'
+                );
+
+                //Determine working mode
+                if (isset($_SERVER['YPF_MODE']))
+                    $root->mode = $_SERVER['YPF_MODE'];
+                elseif (isset($_ENV['YPF_MODE']))
+                    $root->mode = $_ENV['YPF_MODE'];
+                elseif (!isset($root->mode))
+                    $root->mode = 'development';
+
+                if (strpos($root->mode, 'production') === 0) {
+                    $root->development = false;
+                    $root->production = true;
+                } else {
+                    $root->development = true;
+                    $root->production = false;
+                }
+
+                $root->includedLibs = array();
+                $root->loadedHelpers = array();
+                $root->loadedPlugins = array();
+
+                if (self::$configuration && isset(self::$configuration->environments) && isset(self::$configuration->environments->{$root->mode}))
+                    self::$environment = self::$configuration->environments->{$root->mode};
+
+                self::loadPlugins(self::getSetting('plugins'));
+
+                //Load framework, application and plugins helpers
+                self::loadHelpers();
+
+                if (self::$configuration)
+                    YPFCache::fileBased(self::$configurationFile, self::$configuration);
             }
 
-            if (self::$application) {
-                //Load application plugins
-                self::loadPlugins(self::getSetting('plugins'));
-            } else
-                self::loadPlugins();
+            foreach (self::$configurationRoot->loadedPlugins as $info)
+                if (isset($info['initializer']))
+                    require($info['initializer']);
 
+            foreach (self::$configurationRoot->loadedHelpers as $helper)
+                require($helper);
 
-            //Load framework, application and plugins helpers
-            self::loadHelpers();
+            if (!empty(self::$configurationRoot->includedLibs))
+                set_include_path(get_include_path().PATH_SEPARATOR.implode(PATH_SEPARATOR, self::$configurationRoot->includedLibs));
+
+            Logger::initialize();
         }
 
         //TODO This method is intended to close everything openend
@@ -111,9 +131,8 @@
         public static function run() {
             try
             {
-                //Initialize cache manager
-                YPFCache::initialize();
-                Logger::initialize();
+                if (!self::$environment)
+                    throw new NoApplicationError('Application configuration is invalid or incomplete', 'Configuration');
 
                 Application::initialize();
                 Controller::initialize();
@@ -132,6 +151,14 @@
         //Public data methods about the framework and application ==============
 
         /**
+         * Get the main configuration file loaded by the framework
+         * @return string path to the main configuration file loaded
+         */
+        public static function getConfigurationFile() {
+            return self::$configurationFile;
+        }
+
+        /**
          * Gets a setting from the configurations. This method gets settings under
          * the 'environments.{mode}' root.
          *
@@ -143,13 +170,10 @@
         public static function getSetting($path, $default=null) {
             $parts = explode('.', $path);
 
-            if (!self::$configuration)
+            if (!self::$environment)
                 return $default;
-
-            if (!isset(self::$configuration->getRoot()->environments))
-                return $default;
-
-            $root = self::$configuration->getRoot()->environments->{self::$mode};
+            else
+                $root = self::$environment;
 
             foreach ($parts as $p)
             {
@@ -174,21 +198,22 @@
         public static function setSetting($path, $value) {
             $parts = explode('.', $path);
 
-            if (!self::$configuration)
+            if (!self::$environment)
                 return false;
-
-            if (!isset(self::$configuration->getRoot()->environments))
-                return false;
-
-            $root = self::$configuration->getRoot()->environments->{self::$mode};
+            else
+                $root = self::$environment;
 
             foreach ($parts as $i => $p)
             {
                 if ($i == (count($parts)-1)) {
                     $root->{$p} = $value;
                     return true;
-                } else
+                } else {
+                    if (!isset ($root->{$p}))
+                        $root->{$p} = new YPFObject;
+
                     $root = $root->{$p};
+                }
             }
         }
 
@@ -201,7 +226,7 @@
          * @return mixed            YPFDatabase instance or NULL
          */
         public static function getDatabase($name = 'main') {
-            $mode = self::$mode.'-'.$name;
+            $mode = self::$configurationRoot->mode.'-'.$name;
 
             if (isset(self::$databases[$mode]))
                 return self::$databases[$mode];
@@ -212,7 +237,7 @@
             if (!isset($config->type))
                 return null;
 
-            $driverFileName = self::getFileName(self::$paths->ypf, 'framework/databases', $config->type.'.php');
+            $driverFileName = self::getFileName(self::$configurationRoot->paths->ypf, 'framework/databases', $config->type.'.php');
             if (file_exists($driverFileName))
             {
                 require_once $driverFileName;
@@ -243,10 +268,10 @@
 
             $fileName .= '.php';
 
-            if (array_key_exists($classSuffix, self::$classSources))
-                $basePath = self::$classSources[$classSuffix];
+            if (array_key_exists($classSuffix, self::$configurationRoot->classSources))
+                $basePath = self::$configurationRoot->classSources[$classSuffix];
             else
-                $basePath = self::$classSources['*'];
+                $basePath = self::$configurationRoot->classSources['*'];
 
             $baseName = basename($fileName);
             $prefixPath = self::getFileName($basePath, dirname($fileName));
@@ -306,7 +331,7 @@
             if ($suffix == '*')
                 return false;
 
-            self::$classSources[$suffix] = $path;
+            self::$configurationRoot->classSources[$suffix] = $path;
         }
 
         /**
@@ -321,7 +346,7 @@
         public static function getComponentPath($baseName, $prefixPath = '', $useGlob=false, $allPaths=false) {
             $result = array();
 
-            foreach (self::$applicationComponentPaths as $path)
+            foreach (self::$configurationRoot->applicationComponentPaths as $path)
             {
                 $fileName = self::getFileName($path, $prefixPath, $baseName);
 
@@ -363,7 +388,7 @@
          * @return array
          */
         public static function getPaths() {
-            return self::$paths;
+            return self::$configurationRoot->paths;
         }
 
         /**
@@ -371,7 +396,7 @@
          * @return YPFObject
          */
         public static function getPackage() {
-            return self::$package;
+            return self::$configurationRoot->package;
         }
 
         /**
@@ -379,7 +404,7 @@
          * @return string
          */
         public static function getMode() {
-            return self::$mode;
+            return self::$configurationRoot->mode;
         }
 
         /**
@@ -387,7 +412,7 @@
          * @return boolean
          */
         public static function inDevelopment() {
-            return self::$development;
+            return self::$configurationRoot->development;
         }
 
         /**
@@ -395,7 +420,7 @@
          * @return boolean
          */
         public static function inProduction() {
-            return self::$production;
+            return self::$configurationRoot->production;
         }
 
         //======================================================================
@@ -461,16 +486,17 @@
         //======================================================================
 
         private static function loadPlugins($selectPlugins = null) {
-            self::$plugins = array();
-            $basePath = realpath(self::getFileName(self::$applicationComponentPaths[0], 'extensions/plugins'));
-            $ypfPath = realpath(self::getFileName(self::$paths->ypf, 'extensions/plugins'));
+            self::$configurationRoot->loadedPlugins = array();
+
+            $basePath = realpath(self::getFileName(self::$configurationRoot->applicationComponentPaths[0], 'extensions/plugins'));
+            $ypfPath = realpath(self::getFileName(self::$configurationRoot->paths->ypf, 'extensions/plugins'));
 
             if ($selectPlugins !== null) {
                 foreach ($selectPlugins as $plugin)
                     if (!self::loadPlugin ($plugin, self::getFileName($basePath, $plugin)))
                         throw new ErrorComponentNotFound ('plugin', $plugin);
             } else {
-                $basePath = realpath(self::getFileName(self::$applicationComponentPaths[0], 'extensions/plugins'));
+                $basePath = realpath(self::getFileName(self::$configurationRoot->applicationComponentPaths[0], 'extensions/plugins'));
                 if (is_dir($basePath))
                 {
                     $od = opendir($basePath);
@@ -513,51 +539,36 @@
             if (!is_dir($path))
                 return false;
 
-            if (isset(self::$plugins[$name]))
+            if (isset(self::$configurationRoot->loadedPlugins[$name]))
                 throw new BaseError (sprintf("Plugin %s already loaded", $name), 'PLUGIN');
 
-            self::$plugins[$name] = $path;
+            self::$configurationRoot->loadedPlugins[$name] = array('path' => $path);
 
-            self::$applicationComponentPaths = array_splice(self::$applicationComponentPaths, 0, -1);
-            self::$applicationComponentPaths[] = $path;
-            self::$applicationComponentPaths[] = self::$paths->ypf;
+            self::$configurationRoot->applicationComponentPaths = array_splice(self::$configurationRoot->applicationComponentPaths, 0, -1);
+            self::$configurationRoot->applicationComponentPaths[] = $path;
+            self::$configurationRoot->applicationComponentPaths[] = self::$configurationRoot->paths->ypf;
 
             //Plugin has libs to include?
             $libPath = self::getFileName($path, 'lib');
             if (is_dir($libPath))
-                set_include_path (get_include_path().PATH_SEPARATOR.$libPath);
+                self::$configurationRoot->includedLibs[] = $libPath;
 
             //Plugin has config file to include?
             $configFileName = self::getFileName($path, 'config.yml');
             if (is_file($configFileName))
-                self::$configuration->addConfigFile($configFileName);
+                self::$configuration->append(new YPFConfiguration($configFileName));
 
             //Plugin has initializer?
             $initFileName = self::getFileName($path, 'init.php');
             if (is_file($initFileName))
-                require_once $initFileName;
+                self::$configurationRoot->loadedPlugins[$name]['initializer'] = $initFileName;
 
             Logger::framework('DEBUG:PLUGIN', sprintf('%s loaded', $name));
             return true;
         }
 
         private static function loadHelpers() {
-            foreach(self::$applicationComponentPaths as $path)
-            {
-                $helpersPath = self::getFileName($path, 'extensions/helpers');
-
-                if (!is_dir($helpersPath))
-                    continue;
-
-                $od = opendir($helpersPath);
-                while ($helper = readdir($od))
-                {
-                    $helperFileName = self::getFileName($helpersPath, $helper);
-
-                    if (is_file($helperFileName) && (substr($helperFileName, -4) == '.php'))
-                        require_once $helperFileName;
-                }
-            }
+            self::$configurationRoot->loadedHelpers = self::getComponentPath('*.php', 'extensions/helpers', true, true);
         }
     }
 
