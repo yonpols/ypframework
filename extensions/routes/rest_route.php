@@ -110,6 +110,9 @@
                 } else
                     $cloned_config->match = YPFramework::getFileName($root, ':id', $name_col);
 
+                if (!isset($member->action))
+                    $cloned_config->action = $name_col;
+
                 unset($member->controller);
                 if (isset($member->type) && $member->type == 'rest')
                     throw new BaseError (sprintf('A member route can\'t be of type rest'));
