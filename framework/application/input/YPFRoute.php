@@ -34,7 +34,7 @@
             $this->match = $config->match;
             unset($this->baseParameters['match']);
             unset($this->baseParameters['type']);
-            $this->method = null;
+            $this->method = array('GET');
             $this->baseUrl = $baseUrl;
 
             if (isset($config->prefix)) {
@@ -186,14 +186,14 @@
 
             if (count($params))
             {
-                $query = array();
+/*                $query = array();
                 foreach ($params as $k=>$v)
                 {
                     $replace = is_object($v)? (($v instanceof YPFModelBase)? $v->getSerializedKey(): $v->__toString()): $v;
                     $query[] = sprintf('%s=%s', urlencode ($k), urlencode ($replace));
-                }
+                }*/
 
-                $path .= '?'.implode('&', $query);
+                $path .= '?'.http_build_query($params);
             }
 
             if ($path[0] == '/')
@@ -251,6 +251,16 @@
             foreach ($this->parameters as $key => $val)
             $info .= sprintf('<li><strong>%s:</strong> %s</li>', $key, $val);
             return $info .'</ul>';
+        }
+
+        public function getInfo() {
+            if (!is_array($this->method)) {
+                var_dump($this->method);
+                var_dump($this->name);
+                exit;
+            }
+
+            return sprintf('%s: [%s] %s => %s->%s', $this->name, implode(', ', $this->method), $this->match, YPFramework::camelize($this->controller).'Controller', YPFramework::camelize($this->action));
         }
 
         public function is($route) {

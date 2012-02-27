@@ -25,7 +25,7 @@
             $routes = YPFRouter::get();
 
             foreach ($routes->all() as $route)
-                printf("%s => %s->%s\n", $route, $route->controller, $route->action);
+                printf("%s\n", $route->getInfo());
 
             return YPFCommand::RESULT_OK;
         }
