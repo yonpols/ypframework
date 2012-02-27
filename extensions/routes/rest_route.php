@@ -45,7 +45,7 @@
 
             if (isset($config->members)) {
                 $members = $config->members;
-                unset($config->members);
+                unset($new_config->members);
             } else
                 $members = array();
 
@@ -56,18 +56,12 @@
                 YPFRouter::register($name, YPFRoute::get($name, $cloned_config, $baseUrl));
             }
 
-            if (array_search('show', $actions) !== false) {
+            if (array_search('save', $actions) !== false) {
                 $cloned_config = clone $new_config;
-                $cloned_config->match = YPFramework::getFileName($root, ':id(.:format)');
-                $cloned_config->action = 'show';
-                YPFRouter::register('show_'.$name, YPFRoute::get('show_'.$name, $cloned_config, $baseUrl));
-            }
-
-            if (array_search('edit', $actions) !== false) {
-                $cloned_config = clone $new_config;
-                $cloned_config->match = YPFramework::getFileName($root, ':id/edit');
-                $cloned_config->action = 'edit';
-                YPFRouter::register('edit_'.$name, YPFRoute::get('edit_'.$name, $cloned_config, $baseUrl));
+                $cloned_config->match = $root.'(/:id)(.:format)';
+                $cloned_config->action = 'save';
+                $cloned_config->method = 'post';
+                YPFRouter::register('save_'.$name, YPFRoute::get('save_'.$name, $cloned_config, $baseUrl));
             }
 
             if (array_search('create', $actions) !== false) {
@@ -77,12 +71,11 @@
                 YPFRouter::register('create_'.$name, YPFRoute::get('create_'.$name, $cloned_config, $baseUrl));
             }
 
-            if (array_search('save', $actions) !== false) {
+            if (array_search('show', $actions) !== false) {
                 $cloned_config = clone $new_config;
-                $cloned_config->match = $root.'(/:id)(.:format)';
-                $cloned_config->action = 'save';
-                $cloned_config->method = 'post';
-                YPFRouter::register('save_'.$name, YPFRoute::get('save_'.$name, $cloned_config, $baseUrl));
+                $cloned_config->match = YPFramework::getFileName($root, ':id(.:format)');
+                $cloned_config->action = 'show';
+                YPFRouter::register('show_'.$name, YPFRoute::get('show_'.$name, $cloned_config, $baseUrl));
             }
 
             if (array_search('delete', $actions) !== false) {
@@ -93,9 +86,11 @@
                 YPFRouter::register('delete_'.$name, YPFRoute::get('delete_'.$name, $cloned_config, $baseUrl));
             }
 
-            foreach ($collections as $name_col=>$collection) {
-                $collection->prefix = $prefix;
-                YPFRouter::register($name_col.'_'.$name, YPFRoute::get($name_col.'_'.$name, $collection, $baseUrl));
+            if (array_search('edit', $actions) !== false) {
+                $cloned_config = clone $new_config;
+                $cloned_config->match = YPFramework::getFileName($root, ':id/edit');
+                $cloned_config->action = 'edit';
+                YPFRouter::register('edit_'.$name, YPFRoute::get('edit_'.$name, $cloned_config, $baseUrl));
             }
 
             foreach ($members as $name_col=>$member) {
@@ -121,6 +116,11 @@
                     $cloned_config->{$param} = $value;
 
                 YPFRouter::register($name_col.'_'.$name, YPFRoute::get($name_col.'_'.$name, $cloned_config, $baseUrl));
+            }
+
+            foreach ($collections as $name_col=>$collection) {
+                $collection->prefix = $prefix;
+                YPFRouter::register($name_col.'_'.$name, YPFRoute::get($name_col.'_'.$name, $collection, $baseUrl));
             }
         }
     }
