@@ -32,16 +32,22 @@
             if ($root[0] != '/')
                 $root = '/'.$root;
 
+            if (isset($config->prefix))
+                $prefix = YPFramework::getFileName ($config->prefix, substr($root, 1), ':'.YPFramework::underscore($config->model).'_id');
+            else
+                $prefix = YPFramework::getFileName ($root, ':'.YPFramework::underscore($config->model).'_id');
+
             if (isset($config->collections)) {
                 $collections = $config->collections;
                 unset($new_config->collections);
-
-                if (isset($config->prefix))
-                    $prefix = YPFramework::getFileName ($config->prefix, substr($root, 1), ':'.YPFramework::underscore($config->model).'_id');
-                else
-                    $prefix = YPFramework::getFileName ($root, ':'.YPFramework::underscore($config->model).'_id');
             } else
                 $collections = array();
+
+            if (isset($config->members)) {
+                $members = $config->members;
+                unset($config->members);
+            } else
+                $members = array();
 
             if (array_search('index', $actions) !== false) {
                 $cloned_config = clone $new_config;
@@ -90,6 +96,28 @@
             foreach ($collections as $name_col=>$collection) {
                 $collection->prefix = $prefix;
                 YPFRouter::register($name_col.'_'.$name, YPFRoute::get($name_col.'_'.$name, $collection, $baseUrl));
+            }
+
+            foreach ($members as $name_col=>$member) {
+                $cloned_config = clone $new_config;
+
+                if ($member === null)
+                    $member = new stdClass();
+
+                if (isset ($member->match)) {
+                    $cloned_config->match = YPFramework::getFileName($root, ':id', $member->match);
+                    unset($member->match);
+                } else
+                    $cloned_config->match = YPFramework::getFileName($root, ':id', $name_col);
+
+                unset($member->controller);
+                if (isset($member->type) && $member->type == 'rest')
+                    throw new BaseError (sprintf('A member route can\'t be of type rest'));
+
+                foreach ($member as $param=>$value)
+                    $cloned_config->{$param} = $value;
+
+                YPFRouter::register($name_col.'_'.$name, YPFRoute::get($name_col.'_'.$name, $cloned_config, $baseUrl));
             }
         }
     }
