@@ -472,9 +472,9 @@
             $result .= strtoupper($portion[0]).substr($portion, 1);
 
             if ($firstUp)
-                return strtoupper($result[0]).substr($result, 1);
+                return strtoupper(substr($result, 0, 1)).substr($result, 1);
             else
-                return strtolower($result[0]).substr($result, 1);
+                return strtolower(substr($result, 0, 1)).substr($result, 1);
         }
 
         public static function normalize($name) {
