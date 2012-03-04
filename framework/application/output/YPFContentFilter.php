@@ -33,7 +33,7 @@
             return $filters;
         }
 
-        public final function __construct(Application $application) {
+        public final function __construct($application) {
             parent::__construct();
             $this->application = $application;
         }
