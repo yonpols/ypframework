@@ -3,7 +3,7 @@
     define('YPF_CMD', true);
     define('YPF_PATH', realpath(dirname(__FILE__).'/..'));
     define('APP_PATH', realpath(getcwd()));
-    define('WWW_PATH', APP_PATH.'/www');
+    define('WWW_PATH', APP_PATH.'/..');
 
     if (stripos(APP_PATH, YPF_PATH) !== false)
         die("command not allowed on this path\n");
