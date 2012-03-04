@@ -1017,6 +1017,9 @@
             if ($model::$database === null)
                 $model::$database = YPFramework::getDatabase();
 
+            if (!$model::$database)
+                throw new BaseError ('Couldn\'t get a database connection', 'DB');
+
             if (YPFModelBase::$modelParams === null)
                 YPFModelBase::$modelParams = new YPFObject();
 
@@ -1052,6 +1055,7 @@
             $params->sqlJoins =         (isset($settings['_sqlJoins'])? $settings['_sqlJoins']: array());
             $params->sqlConditions =    (isset($settings['_sqlConditions'])? $settings['_sqlConditions']: array());
             $params->sqlGrouping =      (isset($settings['_sqlGrouping'])? $settings['_sqlGrouping']: array());
+            $params->sqlGroupConditions = (isset($settings['_sqlGroupConditions'])? $settings['_sqlGroupConditions']: array());
             $params->sqlOrdering =      (isset($settings['_sqlOrdering'])? $settings['_sqlOrdering']: array());
             $params->sqlLimit =         (isset($settings['_sqlLimit'])? $settings['_sqlLimit']: null);
             $params->customQueries =    (isset($settings['_queries'])? $settings['_queries']: array());

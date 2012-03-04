@@ -14,6 +14,7 @@
         protected $sqlJoins = array();
         protected $sqlConditions = array();
         protected $sqlGrouping = array();
+        protected $sqlGroupContions = array();
         protected $sqlOrdering = array();
         protected $sqlLimit = array();
 
@@ -38,6 +39,7 @@
             $this->sqlConditions = $this->modelParams->sqlConditions;
             $this->sqlGrouping = $this->modelParams->sqlGrouping;
             $this->sqlJoins = $this->modelParams->sqlJoins;
+            $this->sqlGroupConditions = $this->modelParams->sqlGroupConditions;
             $this->sqlOrdering = $this->modelParams->sqlOrdering;
             $this->sqlLimit = $this->modelParams->sqlLimit;
             $this->customQueries = $this->modelParams->customQueries;
@@ -70,12 +72,15 @@
             return $this->sqlOrdering;
         }
 
+        public function getSqlGroupContions() {
+            return $this->sqlGroupContions;
+        }
+
         public function getSqlLimit() {
             return $this->sqlLimit;
         }
 
-        public function fields($fields)
-        {
+        public function fields($fields) {
             if (is_string($fields))
                 $fields = array($fields);
 
@@ -84,8 +89,7 @@
             return $query;
         }
 
-        public function count()
-        {
+        public function count() {
             return $this->database->value($this->sql('COUNT(*)'));
         }
 
@@ -106,23 +110,24 @@
             return $this->database->value($sql);
         }
 
-        public function first()
-        {
+        public function first() {
             $query = $this->limit(1)->query();
             $row = $query->getNext();
             return $this->getModelInstance($row);
         }
 
-        public function last()
-        {
+        public function last() {
             $count = $this->count();
             $query = $this->limit(array($count-1, 1))->query();
             $row = $query->getNext();
             return $this->getModelInstance($row);
         }
 
-        public function toArray()
-        {
+        public function delete() {
+            return $this->database->command($this->sql(null, true));
+        }
+
+        public function toArray() {
             $result = array();
             foreach ($this as $instance)
                 $result[] = $instance;
@@ -131,14 +136,12 @@
         }
 
         //Devuelven listado de valores
-        public function all()
-        {
+        public function all() {
             $this->_query = null;
             return $this;
         }
 
-        public function where($sqlConditions)
-        {
+        public function where($sqlConditions) {
             $query = $this->copy();
             $params = func_num_args();
             if ($params > 1) {
@@ -174,8 +177,7 @@
             return $query;
         }
 
-        public function join($table, $conditions)
-        {
+        public function join($table, $conditions) {
             if (is_string($conditions))
                 $conditions = array($conditions);
 
@@ -190,8 +192,7 @@
             return $query;
         }
 
-        public function orderBy($sqlOrdering)
-        {
+        public function orderBy($sqlOrdering) {
             if (is_string($sqlOrdering))
                 $sqlOrdering = array($sqlOrdering);
 
@@ -200,8 +201,7 @@
             return $query;
         }
 
-        public function groupBy($sqlGrouping)
-        {
+        public function groupBy($sqlGrouping) {
             if (is_string($sqlGrouping))
                 $sqlGrouping = array($sqlGrouping);
 
@@ -210,15 +210,50 @@
             return $query;
         }
 
-        public function limit($sqlLimit)
-        {
+        public function having($sqlGroupContions) {
+            $query = $this->copy();
+
+            $params = func_num_args();
+            if ($params > 1) {
+                $pos = 0;
+                $param = 0;
+                $finalSql = $sqlGroupContions;
+                while (($pos = stripos($finalSql, '?', $pos)) !== false) {
+                    $param++;
+                    if ($param >= $params)
+                        throw new ErrorDataModel ($this->modelName, sprintf('Query: %s has more parameters than specified', $sqlGroupContions));
+
+                    $value = $this->getSqlRepresentation(func_get_arg($param));
+                    $finalSql = substr($finalSql, 0, $pos).$value.substr($finalSql, $pos+1);
+                    $pos += strlen($value);
+                }
+                $query->sqlGroupContions[] = $finalSql;
+            } else {
+                if (is_string($sqlGroupContions))
+                    $query->sqlGroupContions[] = $sqlGroupContions;
+                elseif (is_array($sqlGroupContions) && !empty($sqlGroupContions)) {
+                    $conditions = array();
+                    foreach ($sqlGroupContions as $field => $value)
+                        if (is_int($field))
+                            $conditions[] = $value;
+                        else
+                            $conditions[] = sprintf('(%s = %s)', $field, $this->getSqlRepresentation($value));
+
+
+                    $query->sqlGroupContions[] = implode(' AND ', $conditions);
+                }
+            }
+
+            return $query;
+        }
+
+        public function limit($sqlLimit) {
             $query = $this->copy();
             $query->sqlLimit = $sqlLimit;
             return $query;
         }
 
-        public function __get($name)
-        {
+        public function __get($name) {
             if (isset($this->customQueries[$name]))
                 return $this->processCustomQuery($name);
         }
@@ -228,13 +263,11 @@
             $this->_query = null;
         }
 
-        public function setCustomQueries($customQueries)
-        {
+        public function setCustomQueries($customQueries) {
             $this->customQueries = $customQueries;
         }
 
-        protected function getModelInstance($row)
-        {
+        protected function getModelInstance($row) {
             if ($row == false)
                 return null;
 
@@ -282,8 +315,7 @@
                 return sprintf("'%s'", $this->database->sqlEscaped($value));
         }
 
-        private function processCustomQuery($name)
-        {
+        private function processCustomQuery($name) {
             $query = $this->customQueries[$name];
 
             $new = $this->copy();
@@ -297,6 +329,9 @@
 
             if (isset($query['sqlOrdering']))
                 $new = $new->orderBy($query['sqlOrdering']);
+
+            if (isset($query['sqlGroupConditions']))
+                $new = $new->having($query['sqlGroupConditions']);
 
             if (isset($query['sqlJoins']))
                 $new->sqlJoins = array_merge($new->sqlJoins, $query['sqlJoins']);
@@ -322,33 +357,42 @@
                 return $new;
         }
 
-        private function copy()
-        {
+        private function copy() {
             $copy = clone $this;
             return $copy;
         }
 
-        public function sql($fields = null)
-        {
-            if ($fields === null)
-                $fields = implode(', ', $this->sqlFields);
-            elseif (is_array($fields))
-                $fields = implode(', ', $this->fields);
-
+        public function sql($fields = null, $delete = false) {
             $table = $this->tableName;
             if ($this->aliasName != '')
                 $table = sprintf('%s AS %s', $table, $this->aliasName);
 
-            if ($fields == '')
-                $fields = sprintf('%s.*', ($this->aliasName != '')? $this->aliasName: $this->tableName);
+
+            if (!$delete) {
+                if ($fields === null)
+                    $fields = implode(', ', $this->sqlFields);
+                elseif (is_array($fields))
+                    $fields = implode(', ', $this->fields);
+
+                if ($fields == '')
+                    $fields = sprintf('%s.*', ($this->aliasName != '')? $this->aliasName: $this->tableName);
+
+                $joins = implode(' ', $this->sqlJoins);
+                $group = (count($this->sqlGrouping) > 0)? ' GROUP BY '.implode(', ', $this->sqlGrouping): '';
+                $having = (count($this->sqlGroupContions) > 0)? ' HAVING '.implode(' AND ', $this->sqlGroupContions): '';
+                $command = 'SELECT ';
+            } else {
+                $fields = '';
+                $group = '';
+                $having = '';
+                $command = 'DELETE ';
+            }
 
             $where = (count($this->sqlConditions) > 0)? ' WHERE '.implode(' AND ', $this->sqlConditions): '';
-            $joins = implode(' ', $this->sqlJoins);
-            $group = (count($this->sqlGrouping) > 0)? ' GROUP BY '.implode(', ', $this->sqlGrouping): '';
             $order = (count($this->sqlOrdering) > 0)? ' ORDER BY '.implode(', ', $this->sqlOrdering): '';
             $limit = ($this->sqlLimit !== null)? ' LIMIT '.(is_array($this->sqlLimit)? implode(',', array_slice($this->sqlLimit, 0, 2)): $this->sqlLimit): '';
 
-            return "SELECT $fields FROM $table$joins$where$group$order$limit";
+            return "$command$fields FROM $table$joins$where$group$having$order$limit";
         }
 
         private function query()

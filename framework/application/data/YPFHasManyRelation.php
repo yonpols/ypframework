@@ -194,9 +194,18 @@
             return $this->tiedModelQuery->first();
         }
 
+        public function delete()
+        {
+            return $this->tiedModelQuery->delete();
+        }
+
         public function groupBy($sqlGrouping)
         {
             return $this->tiedModelQuery->groupBy($sqlGrouping);
+        }
+
+        public function having($sqlGroupContions) {
+            return call_user_func_array(array($this->tiedModelQuery, 'having'), func_get_args());
         }
 
         public function last()
