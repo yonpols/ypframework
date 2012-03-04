@@ -36,6 +36,38 @@
         }
 
         /**
+         * Gets/sets cached files in comparison with its modification date. This
+         * function is useful with entire files that need to be cached (processed resources)
+         *
+         * @param string $originalFileName name of the original file to be cached
+         * @param string $dataFileName path of the file to be cached
+         * @return mixed returns false when cache is disabled, data is not cached or file did not change. returns a file path if a cached file exists
+         */
+        public static function entireFile($originalFileName, $dataFileName = null) {
+            if (!YPFramework::getSetting('application.cache', true))
+                return false;
+
+            if (defined('YPF_CMD'))
+                return false;
+
+            $cache_file = YPFramework::getFileName(self::$fileBased, md5($originalFileName)."-".basename($originalFileName));
+
+            if ($dataFileName !== null)
+            {
+                copy($dataFileName, $cache_file);
+                Logger::framework('INFO:CACHE', "$dataFileName loaded to cache: $cache_file");
+                return $cache_file;
+            } else {
+                if (!is_file($cache_file))
+                    return false;
+                elseif (filemtime($originalFileName) > filemtime($cache_file))
+                    return false;
+                else
+                    return $cache_file;
+            }
+        }
+
+        /**
          * Gets/sets data in comparison with a file modification date. This
          * function is useful with data saved in files.
          *
