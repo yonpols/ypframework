@@ -19,6 +19,10 @@
 
             $this->content = $view->render('_layouts/'.$this->output->layout);
 
+            $fileName = $view->getTemplateFileName();
+            $filters = YPFContentFilter::processContent($fileName, $this->content['main']);
+            Logger::framework('DEBUG:CONTENT_FILTER', sprintf('%s filtered %d times', $fileName, $filters));
+
             if (!isset($this->output->disable_content_type) || !$this->output->disable_content_type)
                 $response->header('Content-Type', $view->getOutputType());
 
