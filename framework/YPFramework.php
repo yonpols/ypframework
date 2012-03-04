@@ -58,7 +58,6 @@
 
                 $root->production = false;
                 $root->development = true;
-                $root->mode = 'development';
 
                 //Load Application configuration
                 if (self::$configurationFile)
@@ -71,7 +70,6 @@
                     'route' => 'extensions/routes',
                     '*' => 'models'
                 );
-
                 //Determine working mode
                 if (isset($_SERVER['YPF_MODE']))
                     $root->mode = $_SERVER['YPF_MODE'];
@@ -115,6 +113,11 @@
                 set_include_path(get_include_path().PATH_SEPARATOR.implode(PATH_SEPARATOR, self::$configurationRoot->includedLibs));
 
             Logger::initialize();
+            YPFDateTime::$local_date_format = self::getSetting('application.locale.date_format', 'd/m/Y');
+            YPFDateTime::$local_time_format = self::getSetting('application.locale.time_format', 'H:i:s');
+            YPFDateTime::$local_short_time_format = self::getSetting('application.locale.short_time_format', 'H:i');
+            YPFDateTime::$local_date_time_format = self::getSetting('application.locale.date_time_format', 'd/m/Y H:i:s');
+            YPFDateTime::$local_short_date_time_format = self::getSetting('application.locale.short_date_time_format', 'd/m/Y H:i');
         }
 
         //TODO This method is intended to close everything openend
@@ -412,7 +415,10 @@
          * @return boolean
          */
         public static function inDevelopment() {
-            return self::$configurationRoot->development;
+            if (self::$configurationRoot && isset(self::$configurationRoot->development))
+                return self::$configurationRoot->development;
+            else
+                return true;
         }
 
         /**
@@ -420,7 +426,10 @@
          * @return boolean
          */
         public static function inProduction() {
-            return self::$configurationRoot->production;
+            if (self::$configurationRoot && isset(self::$configurationRoot->production))
+                return self::$configurationRoot->production;
+            else
+                return false;
         }
 
         //======================================================================
@@ -436,7 +445,15 @@
          *
          */
         public static function getFileName() {
-            $filePath = implode(DIRECTORY_SEPARATOR, func_get_args());
+            $arguments = func_get_args();
+
+            $i = 0; while (($i < count($arguments)) && (trim($arguments[$i]) == '')) $i++;
+            $j = count($arguments)-1; while (($j > $i) && (trim($arguments[$i]) == '')) $j--;
+
+
+            $new_arguments = array_splice($arguments, $i, $j-$i+1);
+
+            $filePath = implode(DIRECTORY_SEPARATOR, $new_arguments);
 
             return $filePath;
         }
@@ -479,7 +496,7 @@
 
         public static function normalize($name) {
             $name = preg_replace('/\\s/', '-', $name);
-            preg_replace('/[^a-zA-Z0-9_\\-]/', '', $name);
+            $name = preg_replace('/[^a-zA-Z0-9_\\-]/', '_', $name);
             return $name;
         }
 
@@ -549,7 +566,7 @@
             self::$configurationRoot->applicationComponentPaths[] = self::$configurationRoot->paths->ypf;
 
             //Plugin has libs to include?
-            $libPath = self::getFileName($path, 'lib');
+            $libPath = self::getFileName($path, 'extensions/libs');
             if (is_dir($libPath))
                 self::$configurationRoot->includedLibs[] = $libPath;
 
