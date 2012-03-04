@@ -85,8 +85,7 @@
             $this->base_path = dirname($configFileName);
             $config = $this->loadConfigurationFile ($configFileName);
 
-            foreach ($config as $name=>$value)
-                $this->mergeConfig ($this->root, $name, $this->objetize($value));
+            $this->mergeConfigRoot($this->root, $this->objetize($config));
         }
 
         public function __isset($name) {
@@ -178,6 +177,17 @@
             $this->changed = true;
         }
 
+        private function mergeConfigRoot($receptor, $object, $path = '') {
+            foreach ($object as $key => $value) {
+                if (isset($receptor->{$key}))
+                    $this->mergeConfig ($receptor, $key, $value, $path.$key.'.');
+                else
+                    $receptor->{$key} = $value;
+            }
+
+            $this->changed = true;
+        }
+
         private function objetize($config) {
             if (is_array($config)) {
                 $key = array_keys($config);
@@ -199,7 +209,9 @@
                             $key = substr($key, 0, $pos);
                             if (!isset($object->{$copy}))
                                 throw new BaseError (sprintf('Configuration section %s is not available to be inherited by section %s', $copy, $key));
-                            $object->{$key} = $this->objetize(array_merge_deep(get_object_vars($object->{$copy}), $val));
+
+                            $object->{$key} = $this->objetize(array_merge_deep($object->{$copy}, $val));
+
                         } else
                             $object->{$key} = $this->objetize ($val);
                     }
