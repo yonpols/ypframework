@@ -1,5 +1,11 @@
 <?php
     class YPFDateTime extends DateTime {
+        public static $local_date_format = 'd/m/Y';
+        public static $local_time_format = 'H:i:s';
+        public static $local_short_time_format = 'H:i';
+        public static $local_date_time_format = 'd/m/Y H:i:s';
+        public static $local_short_date_time_format = 'd/m/Y H:i';
+
         private $dbtype = null;
 
         public static function createFromDB ($type, $time) {
@@ -27,16 +33,16 @@
             if ($time === null)
                 return null;
             if ($type == 'date')
-                $date = DateTime::createFromFormat('d/m/Y', $time);
+                $date = DateTime::createFromFormat(self::$local_date_format, $time);
             elseif ($type == 'time') {
-                $date = DateTime::createFromFormat('H:i:s', $time);
+                $date = DateTime::createFromFormat(self::$local_time_format, $time);
                 if (!$date)
-                    $date = DateTime::createFromFormat('H:i', $time);
+                    $date = DateTime::createFromFormat(self::$local_short_time_format, $time);
             }
             else {
-                $date = DateTime::createFromFormat('d/m/Y H:i:s', $time);
+                $date = DateTime::createFromFormat(self::$local_date_time_format, $time);
                 if (!$date)
-                    $date = DateTime::createFromFormat('Y-m-d H:i', $time);
+                    $date = DateTime::createFromFormat(self::$local_short_date_time_format, $time);
             }
 
             if ($date === false)
@@ -71,6 +77,18 @@
         public function minus($string) {
             $date = clone $this;
             $date->sub(new DateInterval($string));
+            return $date;
+        }
+
+        public function getDate() {
+            $date = clone $this;
+            $date->dbtype = 'date';
+            return $date;
+        }
+
+        public function getTime() {
+            $date = clone $this;
+            $date->dbtype = 'time';
             return $date;
         }
 
