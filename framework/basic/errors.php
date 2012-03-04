@@ -97,6 +97,10 @@ EOF;
         if ($errno != $error)
             return;
 
+        if (class_exists('Logger')) {
+            Logger::framework('ERROR', "$errfile:$errline - $errstr");
+        }
+
         if (class_exists('YPFramework'))
             output_error(YPFramework::inProduction(), sprintf("%s\nFile: %s(%s)", $errstr, $errfile, $errline), '');
         else
