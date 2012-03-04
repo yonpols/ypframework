@@ -84,6 +84,9 @@
 
         $html = sprintf('<select id="%s" name="%s"', $id['id'], $id['name']);
 
+        if (is_object($object) && ($object instanceof Model) && $object->getError($id['field']))
+            $attrs['class'] = (isset($attrs['class'])? $attrs['class'].' ': '').'error';
+
         if (is_array($attrs))
         foreach ($attrs as $k=>$v)
             $html .= sprintf(' %s="%s"', $k, htmlentities($v, ENT_QUOTES, 'utf-8'));
@@ -115,7 +118,7 @@
         $html .= '</select>';
 
         if (is_object($object) && ($object instanceof Model) && $object->getError($id['field']))
-            $html .= sprintf('<span class="error"><ul><li>%s</li></ul></span>',
+            $html .= sprintf('<div class="error"><ul><li>%s</li></ul></div>',
                 implode('</li><li>', $object->getError($id['field'])));
 
         return $html;
@@ -129,6 +132,9 @@
         $html = sprintf('<textarea id="%s" name="%s"',
             $id['id'], $id['name']);
 
+        if (is_object($object) && ($object instanceof Model) && $object->getError($id['field']))
+            $attrs['class'] = (isset($attrs['class'])? $attrs['class'].' ': '').'error';
+
         foreach ($attrs as $k=>$v)
             $html .= sprintf(' %s="%s"', $k, htmlentities($v, ENT_QUOTES, 'utf-8'));
 
@@ -137,7 +143,7 @@
         $html .= '</textarea>';
 
         if (is_object($object) && ($object instanceof Model) && $object->getError($id['field']))
-            $html .= sprintf('<span class="error"><ul><li>%s</li></ul></span>',
+            $html .= sprintf('<div class="error"><ul><li>%s</li></ul></div>',
                 implode('</li><li>', $object->getError($id['field'])));
 
         return $html;
@@ -241,7 +247,7 @@
             }
         }
 
-        return array('id' => $id, 'name' => $name, 'field' => $field);
+        return array('id' => YPFramework::normalize($id), 'name' => $name, 'field' => $field);
     }
 
     function form_process_uploaded_file($model, $field, $path, $process_function = 'move_uploaded_file')
