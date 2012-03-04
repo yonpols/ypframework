@@ -115,14 +115,14 @@
 
         private static function isExcluded($type) {
             $excludes = array(
-                'development' => array(),
-                'production' => array(
+                false => array(),
+                true => array(
                     'SQL', 'DEBUG'
                 )
             );
 
             if (self::$excludes === null)
-                self::$excludes = YPFramework::getSetting('application.log.exclude', $excludes[self::$mode]);
+                self::$excludes = YPFramework::getSetting('application.log.exclude', $excludes[YPFramework::inProduction()]);
 
             return (array_search($type, self::$excludes) !== false);
         }
