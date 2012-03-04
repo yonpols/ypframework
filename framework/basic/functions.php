@@ -85,6 +85,12 @@
 
     function array_merge_deep($a1, $a2)
     {
+        if (is_object($a1))
+            $a1 = get_object_vars ($a1);
+
+        if (is_object($a2))
+            $a2 = get_object_vars ($a2);
+
         if (is_array($a1) && is_array($a2)) {
             $result = array();
 
