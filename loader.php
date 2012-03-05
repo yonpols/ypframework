@@ -10,7 +10,6 @@
         include(YPF_PATH.'/errors/no_www_path.php');
 
     ob_start();
-    require YPF_PATH.'/framework/version.php';
     require YPF_PATH.'/framework/basic/functions.php';
     require YPF_PATH.'/framework/basic/errors.php';
 

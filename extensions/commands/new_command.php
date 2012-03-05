@@ -36,7 +36,7 @@
             $configFileName = YPFramework::getFileName($name, 'private/config.yml');
             $data = array(
                 'application_name' => basename($name),
-                'ypf_version' => YPF_VERSION,
+                'ypf_version' => YPFramework::getVersion(),
                 'application_human_name' => $human_name
             );
             $this->getProcessedTemplate($configFileName, $data, $configFileName);

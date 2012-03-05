@@ -432,6 +432,15 @@
                 return false;
         }
 
+        /**
+         * Returns YPFramework version
+         */
+        public static function getVersion() {
+            $configFileName = self::getFileName(self::$configurationRoot->paths->ypf, 'config.yml');
+            $config = new YPFConfiguration($configFileName);
+            return $config->package->version;
+        }
+
         //======================================================================
         //Util functions
 

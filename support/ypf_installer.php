@@ -12,11 +12,13 @@
             $srcFileName = getFileName($packagePath, 'bin/ypf');
 
             if (file_exists($destFileName))
-                @unlink($destFileName);
+                @rename ($destFileName, $destFileNameVersion.'-prev');
 
-            $result = symlink($srcFileName, $destFileName) &&
-                      symlink($srcFileName, $destFileNameVersion) &&
-                      chmod($srcFileName, 0555);
+
+            $result =   symlink($srcFileName, $destFileName) &&
+                        symlink($srcFileName, $destFileNameVersion) &&
+                        chmod($srcFileName, 0555);
+
             if ($result)
                 YPILogger::log ('INFO', sprintf ('YPFramework version %s: installed ypf command', $version));
             else
@@ -27,12 +29,20 @@
 
         public function uninstall() {
             $version = implode('.', $this->package->getVersion());
+            $result = true;
+
+            $destFileName = getFileName(BIN_PATH, 'ypf');
+            if (file_exists($destFileName))
+                $result = unlink($destFileName);
 
             $destFileName = getFileName(BIN_PATH, 'ypf-'.$version);
-            if (!file_exists($destFileName))
-                $destFileName = getFileName(BIN_PATH, 'ypf');
+            if (file_exists($destFileName))
+                $result = $result && unlink($destFileName);
 
-            $result = unlink($destFileName);
+            $destFileName .= '-prev';
+            if (file_exists($destFileName))
+                $result = $result && rename ($destFileName, getFileName(BIN_PATH, 'ypf'));
+
             if ($result)
                 YPILogger::log ('INFO', sprintf ('YPFramework version %s: uninstalled ypf command', $version));
             else
@@ -42,7 +52,7 @@
         }
 
         public function configureTo($package, $packagePath) {
-
+            return true;
         }
     }
 ?>

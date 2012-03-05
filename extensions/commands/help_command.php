@@ -9,7 +9,7 @@
 
         public function run($parameters) {
             if (empty ($parameters)) {
-                echo "YPFramework v".YPF_VERSION.": ypf command-name [options]\n\n";
+                echo "YPFramework v".YPFramework::getVersion().": ypf command-name [options]\n\n";
                 echo "List of available commands:\n";
 
                 $this->showAllCommands();
