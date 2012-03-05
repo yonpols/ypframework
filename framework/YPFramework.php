@@ -60,7 +60,7 @@
                 $root->development = true;
 
                 //Load Application configuration
-                if (self::$configurationFile)
+                if (self::$configurationFile && is_readable(self::$configurationFile))
                     self::$configuration = new YPFConfiguration(self::$configurationFile, $root);
 
                 $root->classSources = array(
@@ -399,7 +399,10 @@
          * @return YPFObject
          */
         public static function getPackage() {
-            return self::$configurationRoot->package;
+            if (isset(self::$configurationRoot->package))
+                return self::$configurationRoot->package;
+            else
+                return false;
         }
 
         /**
