@@ -1,6 +1,5 @@
 <?php
-    class YPFObject
-    {
+    class YPFObject implements YPFSerializable {
         private static $__mixin_included = null;
         private static $__object_ids = 0;
         public static $__callbacks = null;
@@ -207,7 +206,7 @@
 
             foreach ($this as $k=>$v)
             {
-                if (is_object($v) && ($v instanceof YPFObject))
+                if (is_object($v) && ($v instanceof YPFSerializable))
                 {
                     if (!($v instanceof YPFNoJsonable))
                         $result[$k] = $v->__toJSONRepresentable();
@@ -246,6 +245,12 @@
             if ($xmlParent === null)
                 return $root->asXML();
         }
+    }
+
+    interface YPFSerializable {
+        public function __toJSONRepresentable();
+        public function __toJSON();
+        public function __toXML($xmlParent = null);
     }
 
     YPFObject::initialize();

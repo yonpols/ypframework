@@ -1,5 +1,5 @@
 <?php
-    abstract class YPFModelBaseRelation
+    abstract class YPFModelBaseRelation implements YPFSerializable
     {
         protected $relationName;
         protected $relationParams;
@@ -24,6 +24,18 @@
                 else
                     return new YPFHasManyRelation($relatorModelName, $relationName, $relationParams);
             }
+        }
+
+        public function __toJSON() {
+            return $this->baseModelQuery->__toJSON();
+        }
+
+        public function __toXML($xmlParent = null) {
+            return $this->baseModelQuery->__toXML($xmlParent);
+        }
+
+        public function __toJSONRepresentable() {
+            return $this->baseModelQuery;
         }
 
         public abstract function get($relatorModel);

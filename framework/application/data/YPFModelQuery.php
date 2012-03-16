@@ -18,6 +18,8 @@
         protected $sqlOrdering = array();
         protected $sqlLimit = array();
 
+        protected $conditionsJoiner = ' AND ';
+
         protected $customQueries;
 
         private $_query = null;
@@ -78,6 +80,10 @@
 
         public function getSqlLimit() {
             return $this->sqlLimit;
+        }
+
+        public function useOr() {
+            $this->conditionsJoiner = ' OR ';
         }
 
         public function fields($fields) {
@@ -388,7 +394,7 @@
                 $command = 'DELETE ';
             }
 
-            $where = (count($this->sqlConditions) > 0)? ' WHERE '.implode(' AND ', $this->sqlConditions): '';
+            $where = (count($this->sqlConditions) > 0)? ' WHERE '.implode($this->conditionsJoiner, $this->sqlConditions): '';
             $order = (count($this->sqlOrdering) > 0)? ' ORDER BY '.implode(', ', $this->sqlOrdering): '';
             $limit = ($this->sqlLimit !== null)? ' LIMIT '.(is_array($this->sqlLimit)? implode(',', array_slice($this->sqlLimit, 0, 2)): $this->sqlLimit): '';
 

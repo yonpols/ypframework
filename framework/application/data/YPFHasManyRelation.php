@@ -157,6 +157,18 @@
             }
         }
 
+        public function __toJSON() {
+            parent::__toJSON();
+        }
+
+        public function __toJSONRepresentable() {
+            return $this->tiedModelQuery->__toJSONRepresentable();
+        }
+
+        public function __toXML($xmlParent = null) {
+            return $this->tiedModelQuery->__toXML($xmlParent);
+        }
+
         // ----------- ModelQuery Implementation--------------------------------
         public function sum($expression) {
             return $this->tiedModelQuery->sum($expression);

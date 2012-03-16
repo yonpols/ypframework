@@ -18,7 +18,7 @@
         }
 
         private function jsonPrepare($object) {
-            if (is_object($object) && ($object instanceof YPFObject))
+            if (is_object($object) && ($object instanceof YPFSerializable))
                     return $object->__toJSONRepresentable();
             elseif (is_array($object))
                 return array_map (array($this, 'jsonPrepare'), $object);
