@@ -143,7 +143,7 @@
             while (preg_match('/(:|\\$)[a-zA-Z][a-zA-Z0-9_]*/', $path, $matches, PREG_OFFSET_CAPTURE, $start))
             {
                 $key = substr($matches[0][0], 1);
-                if (!array_key_exists($key, $params))
+                if (!is_array($params) || !array_key_exists($key, $params))
                 {
                     $start = $matches[0][1]+strlen($matches[0][0]);
                     continue;
