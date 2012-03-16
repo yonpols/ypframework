@@ -491,19 +491,17 @@
             $result = '';
             $last = 0;
 
-            while (($pos = stripos($string, '_', $last)) !== false)
-            {
-                $portion = substr($string, $last, $pos-$last);
-                $result .= strtoupper($portion[0]).substr($portion, 1);
-                $last = $pos+1;
+            while (preg_match('/(_(.))|(\\\\[a-z])/', $string, $match)) {
+                if ($match[1])
+                    $string = str_replace($match[1], strtoupper($match[2]), $string);
+                else
+                    $string = str_replace($match[3], strtoupper($match[3]), $string);
             }
-            $portion = substr($string, $last);
-            $result .= strtoupper($portion[0]).substr($portion, 1);
 
             if ($firstUp)
-                return strtoupper(substr($result, 0, 1)).substr($result, 1);
+                return strtoupper(substr($string, 0, 1)).substr($string, 1);
             else
-                return strtolower(substr($result, 0, 1)).substr($result, 1);
+                return strtolower(substr($string, 0, 1)).substr($string, 1);
         }
 
         public static function normalize($name) {
