@@ -22,16 +22,9 @@
             if (file_exists($name))
                 $this->exitNow (YPFCommand::RESULT_FILESYSTEM_ERROR, sprintf('%s already exists', basename ($name)));
 
-            if (!@mkdir($name))
-                $this->exitNow (YPFCommand::RESULT_FILESYSTEM_ERROR, sprintf('can\'t create directory %s', basename ($name)));
-
-            system(sprintf('cp -r "%s/new_app/" "%s"', YPF_PATH, $name), $result);
+            system(sprintf('cp -r "%s/new_app" "%s"', YPF_PATH, $name), $result);
             if ($result != 0)
                 $this->exitNow (YPFCommand::RESULT_FILES_ERROR, sprintf('can\'t copy files to %s', $name));
-
-            chmod(YPFramework::getFileName($name, 'private/support/tmp'), 01775);
-            chmod(YPFramework::getFileName($name, 'private/support/db'), 01775);
-            chmod(YPFramework::getFileName($name, 'private/support/log'), 01775);
 
             $configFileName = YPFramework::getFileName($name, 'private/config.yml');
             $data = array(
