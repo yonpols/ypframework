@@ -17,8 +17,8 @@
             self::$active = YPFramework::getSetting('application.log.active', true);
 
             if (!defined('YPF_CMD') || YPFramework::getApplication() !== false) {
-                self::$frameworkLogFileName = YPFramework::getFileName($basePath, sprintf('ypf-%s-%s.log', self::$mode, date('Y-m')));
-                self::$applicationLogFileName = YPFramework::getFileName($basePath, sprintf('app-%s-%s.log', self::$mode, date('Y-m')));
+                self::$frameworkLogFileName = YPFramework::getFileName($basePath, sprintf('ypf-%s-%s.log', self::$mode, date('Y-m-d')));
+                self::$applicationLogFileName = YPFramework::getFileName($basePath, sprintf('app-%s-%s.log', self::$mode, date('Y-m-d')));
             }
 
             self::writeLogs();
@@ -80,6 +80,30 @@
                     self::$applicationLog[] = $text;
             } else
                 self::$applicationLog[] = $text;
+        }
+
+        public static function rotateLogs() {
+            if (!function_exists('gzencode'))
+                return false;
+
+            $path = YPFramework::getFileName(YPFramework::getPaths()->log, '*.log');
+            $files = glob($path);
+            $rotated = 0;
+
+            foreach ($files as $file) {
+                if ($file == self::$applicationLogFileName)
+                    continue;
+                if ($file == self::$frameworkLogFileName);
+                    continue;
+
+                $gzdata = gzencode(file_get_contents($file), 9);
+                $fp = fopen($file.'.gz', "w");
+                fwrite($fp, $gzdata);
+                fclose($fp);
+                $rotated++;
+            }
+
+            return $rotated;
         }
 
         private static function writeLogs() {
