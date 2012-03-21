@@ -7,10 +7,12 @@
 
             $this->joinerTable = $relationParams['through'];
 
+            $aliasPrefix = ($this->tableAlias !== null)? $this->tableAlias.'.': '';
+
             $joinConditions = array();
             foreach($this->relationParams['relatedKeys'] as $index=>$key)
-                $joinConditions[] = sprintf('(%s.%s = %s.%s)',
-                    $this->relationName, $index,
+                $joinConditions[] = sprintf('(%s%s = %s.%s)',
+                    $aliasPrefix, $index,
                     $this->joinerTable, $key);
 
             $this->baseModelQuery = $this->baseModelQuery->join($this->joinerTable, $joinConditions);

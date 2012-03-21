@@ -11,6 +11,8 @@
         protected $iterationKeys = null;
         protected $iterationPos = 0;
 
+        protected $tableAlias;
+
         protected function __construct($relatorModelName, $relationName, $relationParams) {
             $this->relationName = $relationName;
             $this->relationParams = $relationParams;
@@ -34,8 +36,13 @@
             $this->customQueries = array_merge($this->customQueries, $this->relatedModelParams->customQueries);
 
             $model = $this->relatedModelName;
-            $this->baseModelQuery = $model::all()->alias($relationName)->where($sqlConditions)->groupBy($sqlGrouping)->orderBy($sqlOrdering);
+            $this->baseModelQuery = $model::all()->where($sqlConditions)->groupBy($sqlGrouping)->orderBy($sqlOrdering);
             $this->baseModelQuery->setCustomQueries($this->customQueries);
+
+            if (isset($relationParams['alias'])) {
+                $this->tableAlias = $relationParams['alias'];
+                $this->baseModelQuery = $this->baseModelQuery->alias($this->tableAlias);
+            }
         }
 
         public function __get($name) {
@@ -57,7 +64,10 @@
         }
 
         public function has($instance) {
-            return ($this->tiedModelQuery->where($instance->getSqlIdConditions($this->tiedModelQuery->getAliasName()))->count() > 0);
+            if (is_array($this->iterationQuery))
+                return array_search ($instance, $this->iterationQuery);
+            else
+                return ($this->tiedModelQuery->where($instance->getSqlIdConditions($this->tiedModelQuery->getAliasName()))->count() > 0);
         }
 
         public function set($relatorModel, $value)
@@ -102,14 +112,16 @@
             $this->relatorInstance = $relatorModel;
             $relatorKey = $relatorModel->getSerializedKey();
 
+            $aliasPrefix = ($this->tableAlias !== null)? $this->tableAlias.'.': '';
+
             $whereConditions = array();
 
             foreach($this->relationParams['keys'] as $index=>$key)
             {
                 if (is_numeric($index))
-                    $whereConditions[sprintf('%s.%s', $this->relationName, $key)] = $relatorModel->__get($this->relatorModelParams->keyFields[$index]);
+                    $whereConditions[sprintf('%s%s', $aliasPrefix, $key)] = $relatorModel->__get($this->relatorModelParams->keyFields[$index]);
                 else
-                    $whereConditions[sprintf('%s.%s', $this->relationName, $key)] = $relatorModel->{$index};
+                    $whereConditions[sprintf('%s%s', $aliasPrefix, $key)] = $relatorModel->{$index};
             }
 
             $this->tiedModelQuery = $this->baseModelQuery->where($whereConditions);
