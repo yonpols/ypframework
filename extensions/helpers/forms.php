@@ -281,7 +281,13 @@
                 $i += 1;
 
             $dest_file = YPFramework::getFileName($path, $file_name.$i.$extension);
-            $process_function($data['tmp_name'], $dest_file);
+            $dest_path = dirname($dest_file);
+
+            if (!is_dir($dest_path))
+                @mkdir ($dest_path, 0777, true);
+
+            if (!@$process_function($data['tmp_name'], $dest_file))
+                return false;
 
             if (file_exists($path.$model->{$field}))
                 @unlink($path.$model->{$field});
