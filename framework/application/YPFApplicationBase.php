@@ -40,16 +40,14 @@
             $this->output->format = null;
             $this->output->charset = 'utf-8';
 
-            if (isset($_SESSION['error']))
-            {
-                $this->output->error = $_SESSION['error'];
-                unset($_SESSION['error']);
+            if (isset(YPFSession::get()->error)) {
+                $this->output->error = YPFSession::get()->error;
+                unset(YPFSession::get()->error);
             }
 
-            if (isset($_SESSION['notice']))
-            {
-                $this->output->notice = $_SESSION['notice'];
-                unset($_SESSION['notice']);
+            if (isset(YPFSession::get()->notice)) {
+                $this->output->notice = YPFSession::get()->notice;
+                unset(YPFSession::get()->notice);
             }
         }
 
@@ -141,9 +139,9 @@
          */
         public function redirectTo($url=null) {
             if ($this->output->error)
-                $_SESSION['error'] = $this->output->error;
-            if ($this->output->error)
-                $_SESSION['notice'] = $this->output->notice;
+                YPFSession::get()->error = $this->output->error;
+            if ($this->output->notice)
+                YPFSession::get()->notice = $this->output->notice;
 
             if ($url === null)
                 $url = $this->getSetting('url', '');

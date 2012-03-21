@@ -7,6 +7,7 @@
         protected $route;
 
         protected $params;
+        protected $session;
         protected $data;
         protected $output;
 
@@ -14,14 +15,13 @@
             parent::__construct();
 
             $name = get_class($this);
-/*            if (($pos = strrpos($name, '\\')) !== false)
-                $name = substr($name, $pos+1);*/
 
             $this->name = substr($name, 0, -10);
             $this->application = $application;
             $this->routes = $application->getRoutes();
             $this->route = $application->getCurrentRoute();
             $this->params = array();
+            $this->session = YPFSession::get();
         }
 
         public function __get($name) {

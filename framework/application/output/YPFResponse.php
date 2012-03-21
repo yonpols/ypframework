@@ -91,6 +91,7 @@
         }
 
         private function endOutput() {
+            YPFSession::get()->setCookie();
             ob_flush();
         }
     }
