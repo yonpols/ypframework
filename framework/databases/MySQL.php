@@ -3,9 +3,9 @@
 	{
         protected $transaction = 0;
 
-        public function __destruct()
-        {
-            mysql_close($this->db);
+        public function __destruct() {
+            if ($this->connected)
+                mysql_close($this->db);
         }
 
 		/*
