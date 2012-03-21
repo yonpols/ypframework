@@ -255,7 +255,7 @@
         }
 
         public final function getErrors() {
-            return $this->_modelErrors;
+            return arraize($this->_modelErrors);
         }
 
         public final function clearErrors() {
@@ -512,10 +512,10 @@
 
             if (is_null($value))
                 return true;
-            elseif ($value instanceof Iterator)
+            elseif ($value instanceof YPFModelQuery) {
                 foreach ($value as $inst)
                     $valid = $valid && $inst->isValid();
-            else
+            } elseif (is_object($value) && $value instanceof YPFModelBase)
                 $valid = $value->isValid();
 
             return $valid;
