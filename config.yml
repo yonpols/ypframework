@@ -1,6 +1,6 @@
 package:
   type: framework
   name: ypf
-  version: 0.3.2
+  version: 0.3.4
   author: 'Juan Pablo Marzetti'
   installer: support/ypf_installer.php
