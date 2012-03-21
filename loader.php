@@ -29,6 +29,7 @@
     require YPF_PATH.'/framework/application/YPFApplicationBase.php';
     require YPF_PATH.'/framework/application/input/YPFRequest.php';
     require YPF_PATH.'/framework/application/input/YPFRoute.php';
+    require YPF_PATH.'/framework/application/processing/YPFSession.php';
     require YPF_PATH.'/framework/application/processing/YPFControllerBase.php';
     require YPF_PATH.'/framework/application/processing/YPFViewBase.php';
     require YPF_PATH.'/framework/application/data/IYPFModelQuery.php';
