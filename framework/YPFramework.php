@@ -410,7 +410,10 @@
          * @return string
          */
         public static function getMode() {
-            return self::$configurationRoot->mode;
+            if (isset(self::$configurationRoot->mode))
+                return self::$configurationRoot->mode;
+            else
+                return 'development';
         }
 
         /**
