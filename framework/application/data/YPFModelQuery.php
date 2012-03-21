@@ -82,6 +82,14 @@
             return $this->sqlLimit;
         }
 
+        public function getModelName() {
+            return $this->modelName;
+        }
+
+        public function getModelParams() {
+            return $this->modelParams;
+        }
+
         public function useOr() {
             $this->conditionsJoiner = ' OR ';
         }
