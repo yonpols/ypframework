@@ -146,8 +146,7 @@
             if ($url === null)
                 $url = $this->getSetting('url', '');
 
-            header('Location: '.$url);
-            exit;
+            YPFResponse::sendRedirect($url);
         }
 
         public function getCurrentRoute() {

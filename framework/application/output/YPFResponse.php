@@ -14,6 +14,12 @@
             $this->action = $action;
         }
 
+        public static function sendRedirect($url) {
+            YPFSession::get()->setCookie();
+            header('Location: '.$url);
+            exit;
+        }
+
         public function send() {
             $output = $this->application->getOutput();
 
