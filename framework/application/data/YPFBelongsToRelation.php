@@ -14,7 +14,12 @@
                 throw new ErrorDataModel ($this->relatedModelName, 'Model not defined.');
 
             $model = $this->relatedModelName;
-            $this->baseModelQuery = $model::all()->alias($relationName);
+            $this->baseModelQuery = $model::all();
+
+            if (isset($relationParams['alias'])) {
+                $this->tableAlias = $relationParams['alias'];
+                $this->baseModelQuery = $this->baseModelQuery->alias($this->tableAlias);
+            }
         }
 
         public function get($relatorModel)
@@ -22,8 +27,10 @@
             if (!$this->inCache($relatorModel)) {
                 $whereConditions = array();
 
+                $aliasPrefix = ($this->tableAlias !== null)? $this->tableAlias: $this->relatedModelParams->tableName;
+
                 foreach($this->relationParams['keys'] as $index=>$key)
-                    $whereConditions[sprintf('%s.%s', $this->relationName, $this->relatedModelParams->keyFields[$index])] = $relatorModel->{$key};
+                    $whereConditions[sprintf('`%s`.`%s`', $aliasPrefix, $this->relatedModelParams->keyFields[$index])] = $relatorModel->{$key};
 
                 $this->setCache($relatorModel, $this->baseModelQuery->where($whereConditions)->first());
             }

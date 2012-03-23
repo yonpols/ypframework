@@ -11,8 +11,6 @@
         protected $iterationKeys = null;
         protected $iterationPos = 0;
 
-        protected $tableAlias;
-
         protected function __construct($relatorModelName, $relationName, $relationParams) {
             $this->relationName = $relationName;
             $this->relationParams = $relationParams;
@@ -112,16 +110,16 @@
             $this->relatorInstance = $relatorModel;
             $relatorKey = $relatorModel->getSerializedKey();
 
-            $aliasPrefix = ($this->tableAlias !== null)? $this->tableAlias.'.': '';
+            $aliasPrefix = ($this->tableAlias !== null)? $this->tableAlias: $this->relatedModelParams->tableName;
 
             $whereConditions = array();
 
             foreach($this->relationParams['keys'] as $index=>$key)
             {
                 if (is_numeric($index))
-                    $whereConditions[sprintf('%s%s', $aliasPrefix, $key)] = $relatorModel->__get($this->relatorModelParams->keyFields[$index]);
+                    $whereConditions[sprintf('`%s`.`%s`', $aliasPrefix, $key)] = $relatorModel->__get($this->relatorModelParams->keyFields[$index]);
                 else
-                    $whereConditions[sprintf('%s%s', $aliasPrefix, $key)] = $relatorModel->{$index};
+                    $whereConditions[sprintf('`%s`.`%s`', $aliasPrefix, $key)] = $relatorModel->{$index};
             }
 
             $this->tiedModelQuery = $this->baseModelQuery->where($whereConditions);

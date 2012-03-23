@@ -1,13 +1,17 @@
 <?php
+    /**
+     * Implementation of ActiveRecord pattern.
+     *
+     * YPFModelBase is the base class of each application Model base class.
+     * It contains all the logic useful to store and retrieve rows of a table
+     * in an object oriented way.
+     */
     class YPFModelBase extends YPFObject implements Iterator {
-        //Variables de ModelBase, no pueden redefinirse.
         private static $modelParams = null;
 
-        //Each model on initialization can set up a different database.
-        //If this is the case, relations doesn't work.
-        protected static $database;
+        protected static $_databaseName = 'main';
+        protected static $_database;
 
-        //Variables de instancia
         protected $_modelData = array();
         protected $_modelFieldModified = array();
         protected $_modelModified = false;
@@ -32,19 +36,19 @@
         public static function install() {
             $model = get_called_class();
 
-            if ($model::$database === null)
-                $model::$database = YPFramework::getDatabase();
+            if ($model::$_database === null)
+                $model::$_database = YPFramework::getDatabase();
 
             $settings = get_class_vars($model);
 
             if (isset($settings['_schema']))
-                $model::$database->install($settings['_schema']);
+                $model::$_database->install($settings['_schema']);
         }
 
         public static function getDB() {
             $modelName = get_called_class();
             $modelParams = Model::getModelParams($modelName);
-            return $modelName::$database;
+            return $modelName::$_database;
         }
 
         public static function find($id, $instance = null, $rawId = false) {
@@ -68,16 +72,8 @@
             else
                 $str_key = $id;
 
-            /*
-            if (isset(self::$__cache->{$modelName}) && array_key_exists($str_key, self::$__cache->{$modelName}))
-                return self::$__cache->{$modelName}[$str_key];
-            else
-                self::$__cache->{$modelName} = array();
-             *
-             */
-
             $id = Model::decodeKey($id, $modelParams);
-            $aliasPrefix = ($modelParams->aliasName!='')? $modelParams->aliasName.'.': '';
+            $aliasPrefix = ($modelParams->aliasName!='')? $modelParams->aliasName: $modelParams->tableName;
 
             //Preparar condiciones
             $conditions = $modelParams->sqlConditions;
@@ -85,9 +81,9 @@
             {
                 foreach ($id as $key=>$value)
                     if (array_search ($key, $modelParams->keyFields) !== false)
-                        $conditions[] = sprintf('(%s%s = %s)', $aliasPrefix, $key, Model::getFieldSQLRepresentation($key, $value, $modelParams, $rawId));
+                        $conditions[] = sprintf('(`%s`.`%s` = %s)', $aliasPrefix, $key, Model::getFieldSQLRepresentation($key, $value, $modelParams, $rawId));
             } elseif (count($modelParams->keyFields) == 1)
-                $conditions[] = sprintf('(%s%s = %s)', $aliasPrefix, $modelParams->keyFields[0], Model::getFieldSQLRepresentation($modelParams->keyFields[0], $id, $modelParams), $rawId);
+                $conditions[] = sprintf('(`%s`.`%s` = %s)', $aliasPrefix, $modelParams->keyFields[0], Model::getFieldSQLRepresentation($modelParams->keyFields[0], $id, $modelParams), $rawId);
             else
                 throw new ErrorDataModel ($modelName, 'find(): invalid number of key values');
 
@@ -98,18 +94,18 @@
             $model = get_called_class();
             YPFModelBase::getModelParams($model);
 
-            if ($model::$database->inTransaction()) {
+            if ($model::$_database->inTransaction()) {
                 return $code();
             } else {
                 try {
-                    $model::$database->begin();
+                    $model::$_database->begin();
                     if ($code()) {
-                        $model::$database->commit();
+                        $model::$_database->commit();
                         return true;
                     } else
-                        $model::$database->rollback();
+                        $model::$_database->rollback();
                 } catch (Exception $e) {
-                    $model::$database->rollback();
+                    $model::$_database->rollback();
                 }
                 return false;
             }
@@ -265,18 +261,18 @@
         public function save() {
             $model = $this->_modelName;
 
-            if ($model::$database->inTransaction()) {
+            if ($model::$_database->inTransaction()) {
                 return $this->realSave();
             } else {
                 try {
-                    $model::$database->begin();
+                    $model::$_database->begin();
                     if ($this->realSave()) {
-                        $model::$database->commit();
+                        $model::$_database->commit();
                         return true;
                     } else
-                        $model::$database->rollback();
+                        $model::$_database->rollback();
                 } catch (Exception $e) {
-                    $model::$database->rollback();
+                    $model::$_database->rollback();
                 }
                 return false;
             }
@@ -285,18 +281,18 @@
         public function delete() {
             $model = $this->_modelName;
 
-            if ($model::$database->inTransaction()) {
+            if ($model::$_database->inTransaction()) {
                 return $this->realDelete();
             } else {
                 try {
-                    $model::$database->begin();
+                    $model::$_database->begin();
                     if ($this->realDelete()) {
-                        $model::$database->commit();
+                        $model::$_database->commit();
                         return true;
                     } else
-                        $model::$database->rollback();
+                        $model::$_database->rollback();
                 } catch (Exception $e) {
-                    $model::$database->rollback();
+                    $model::$_database->rollback();
                 }
                 return false;
             }
@@ -306,11 +302,7 @@
             if ($this->isIdNull())
                 return true;
 
-            $sql = sprintf("SELECT COUNT(*) FROM %s WHERE %s",
-                $this->_modelParams->tableName, implode(' AND ', $this->getSqlIdConditions()));
-
-            $model = $this->_modelName;
-            return ($model::$database->value($sql) == 0);
+            return ($this->_modelParams->modelQuery->where($this->getSqlIdConditions())->count() == 0);
         }
 
         public function isValid() {
@@ -456,7 +448,7 @@
                     if ($value === '')
                         return 'NULL';
                     $model = $modelParams->modelName;
-                    if ($rawData) return sprintf("'%s'", $model::$database->sqlEscaped($value));
+                    if ($rawData) return sprintf("'%s'", $model::$_database->sqlEscaped($value));
                     return sprintf("'%s'", $value->__toDBValue());
 
                 case 'varchar':
@@ -466,9 +458,9 @@
                 default:
                     $model = $modelParams->modelName;
                     if ($modelParams->tableCharset != 'utf-8' && !$rawData)
-                        return sprintf("'%s'", $model::$database->sqlEscaped(iconv('utf-8', $modelParams->tableCharset, $value)));
+                        return sprintf("'%s'", $model::$_database->sqlEscaped(iconv('utf-8', $modelParams->tableCharset, $value)));
                     else
-                        return sprintf("'%s'", $model::$database->sqlEscaped($value));
+                        return sprintf("'%s'", $model::$_database->sqlEscaped($value));
             }
         }
 
@@ -708,10 +700,10 @@
                 foreach ($fieldNames as $field)
                     $fieldValues[] = Model::getFieldSQLRepresentation($field, $this->__get($field), $this->_modelParams);
 
-                $sql = sprintf("INSERT INTO %s (%s) VALUES(%s)", $this->_modelParams->tableName,
-                    implode(', ', $fieldNames), implode(', ', $fieldValues));
+                $sql = sprintf("INSERT INTO `%s` (`%s`) VALUES(%s)", $this->_modelParams->tableName,
+                    implode('`, `', $fieldNames), implode(', ', $fieldValues));
 
-                $result = $model::$database->command($sql);
+                $result = $model::$_database->command($sql);
 
                 if (is_int($result) && (count($this->_modelParams->keyFields)==1))
                 {
@@ -748,12 +740,12 @@
 
                 foreach ($fieldNames as $field)
                     if (isset($this->_modelFieldModified[$field]) && $this->_modelFieldModified[$field])
-                        $fieldAssigns[] = sprintf("%s = %s", $field, Model::getFieldSQLRepresentation($field, $this->__get($field), $this->_modelParams));
+                        $fieldAssigns[] = sprintf("`%s` = %s", $field, Model::getFieldSQLRepresentation($field, $this->__get($field), $this->_modelParams));
 
-                $sql = sprintf("UPDATE %s SET %s WHERE %s", $this->_modelParams->tableName,
+                $sql = sprintf("UPDATE `%s` SET %s WHERE %s", $this->_modelParams->tableName,
                     implode(', ', $fieldAssigns), implode(' AND ', $this->getSqlIdConditions(false)));
 
-                $result = $model::$database->command($sql);
+                $result = $model::$_database->command($sql);
 
                 if (!$result)
                     return false;
@@ -765,7 +757,7 @@
                             $result = false;
                     }
                     else
-                        $model::$database->rollback();
+                        $model::$_database->rollback();
             }
 
             if ($result === false)
@@ -780,7 +772,7 @@
                     if ($relation instanceof YPFHasManyRelation) {
                         $relation = $relation->get($this);
                         if (!$relation->save()) {
-                            $model::$database->rollback();
+                            $model::$_database->rollback();
                             return false;
                         }
                     }
@@ -819,10 +811,10 @@
             if (!$result)
                 return false;
 
-            $sql = sprintf("DELETE FROM %s WHERE %s",
+            $sql = sprintf("DELETE FROM `%s` WHERE %s",
                 $this->_modelParams->tableName, implode(' AND ', $this->getSqlIdConditions(false)));
 
-            $result = $model::$database->command($sql);
+            $result = $model::$_database->command($sql);
 
             foreach($model::after('delete') as $function)
                 if (is_callable (array($this, $function)))
@@ -840,18 +832,16 @@
             $conditions = array();
 
             if (is_string($withAlias) && (strlen($withAlias) > 0))
-                $aliasPrefix = $withAlias.'.';
-            elseif ($withAlias === false)
-                $aliasPrefix = '';
+                $aliasPrefix = $withAlias;
             elseif($this->_modelParams->aliasName != '')
-                $aliasPrefix = $this->_modelParams->aliasName.'.';
+                $aliasPrefix = $this->_modelParams->aliasName;
             else
-                $aliasPrefix = '';
+                $aliasPrefix = $this->_modelParams->tableName;
 
             foreach($this->_modelParams->keyFields as $field)
             {
                 $value = Model::getFieldSQLRepresentation ($field, $this->__get($field), $this->_modelParams);
-                $conditions[] = sprintf('(%s%s %s %s)', $aliasPrefix, $field,
+                $conditions[] = sprintf('(`%s`.`%s` %s %s)', $aliasPrefix, $field,
                     ($value == 'NULL')? 'IS':'=', $value);
             }
 
@@ -1014,10 +1004,10 @@
         public static final function loadMetadata() {
             $model = get_called_class();
 
-            if ($model::$database === null)
-                $model::$database = YPFramework::getDatabase();
+            if ($model::$_database === null)
+                $model::$_database = YPFramework::getDatabase($model::$_databaseName);
 
-            if (!$model::$database)
+            if (!$model::$_database)
                 throw new BaseError ('Couldn\'t get a database connection', 'DB');
 
             if (YPFModelBase::$modelParams === null)
@@ -1069,13 +1059,13 @@
                         $params->validations[$k][$i] = array('value' => $validation);
 
             $params->relationObjects =  new YPFObject();
-            $params->tableMetaData = $model::$database->getTableFields($params->tableName);
+            $params->tableMetaData = $model::$_database->getTableFields($params->tableName);
 
             if (!$params->tableMetaData)
                 throw new ErrorDataModel ($model, sprintf('Couldn\'t load table \'%s\' metadata', $params->tableName));
 
             YPFModelBase::$modelParams->{$model} = $params;
-            $params->modelQuery = new YPFModelQuery($model::$database, $model);
+            $params->modelQuery = new YPFModelQuery($model::$_database, $model);
         }
     }
 ?>

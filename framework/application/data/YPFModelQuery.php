@@ -196,7 +196,7 @@
                 $conditions = array($conditions);
 
             $query = $this->copy();
-            $query->sqlJoins[] = sprintf(' JOIN %s ON %s', $table, implode(' AND ', $conditions));
+            $query->sqlJoins[] = sprintf(' JOIN `%s` ON %s', $table, implode(' AND ', $conditions));
             return $query;
         }
 
@@ -311,13 +311,6 @@
                 return sprintf("%.F", $value);
             elseif (is_int($value))
                 return sprintf("%d", $value);
-            elseif (is_numeric($value))
-            {
-                if (floor($value) == $value)
-                    return sprintf("%d", $value);
-                else
-                    return sprintf("%.F", $value);
-            }
             elseif (is_object($value)) {
                 if ($value instanceof Model)
                     return sprintf("'%s'", $this->database->sqlEscaped($value->getSerializedKey()));
@@ -377,9 +370,9 @@
         }
 
         public function sql($fields = null, $delete = false) {
-            $table = $this->tableName;
+            $table = '`'.$this->tableName.'`';
             if ($this->aliasName != '')
-                $table = sprintf('%s AS %s', $table, $this->aliasName);
+                $table = sprintf('`%s` AS `%s`', $table, $this->aliasName);
 
 
             if (!$delete) {
@@ -389,7 +382,7 @@
                     $fields = implode(', ', $this->fields);
 
                 if ($fields == '')
-                    $fields = sprintf('%s.*', ($this->aliasName != '')? $this->aliasName: $this->tableName);
+                    $fields = '*';
 
                 $joins = implode(' ', $this->sqlJoins);
                 $group = (count($this->sqlGrouping) > 0)? ' GROUP BY '.implode(', ', $this->sqlGrouping): '';

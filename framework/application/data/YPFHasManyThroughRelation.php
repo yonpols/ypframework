@@ -7,11 +7,11 @@
 
             $this->joinerTable = $relationParams['through'];
 
-            $aliasPrefix = ($this->tableAlias !== null)? $this->tableAlias.'.': '';
+            $aliasPrefix = ($this->tableAlias !== null)? $this->tableAlias: $this->relatedModelParams->tableName;
 
             $joinConditions = array();
             foreach($this->relationParams['relatedKeys'] as $index=>$key)
-                $joinConditions[] = sprintf('(%s%s = %s.%s)',
+                $joinConditions[] = sprintf('(`%s`.`%s` = `%s`.`%s`)',
                     $aliasPrefix, $index,
                     $this->joinerTable, $key);
 
@@ -56,7 +56,7 @@
             $whereConditions = array();
 
             foreach($this->relationParams['relatorKeys'] as $index=>$key)
-                $whereConditions[sprintf('%s.%s', $this->joinerTable, $key)] = $relatorModel->__get($index);
+                $whereConditions[sprintf('`%s`.`%s`', $this->joinerTable, $key)] = $relatorModel->__get($index);
 
             $this->tiedModelQuery = $this->baseModelQuery->where($whereConditions);
             if ($this->inCache($relatorModel))
@@ -92,12 +92,12 @@
 
             $fields = array();
             foreach($this->relationParams['relatorKeys'] as $index=>$key)
-                $fields[] = sprintf('(%s = %s)', $key, YPFModelBase::getFieldSQLRepresentation($index, $this->relatorInstance->__get($index), $this->relatorModelParams));
+                $fields[] = sprintf('(`%s` = %s)', $key, YPFModelBase::getFieldSQLRepresentation($index, $this->relatorInstance->__get($index), $this->relatorModelParams));
 
             foreach($this->relationParams['relatedKeys'] as $index=>$key)
-                $fields[] = sprintf('(%s = %s)', $key, YPFModelBase::getFieldSQLRepresentation($index, $newInstance->__get($index), $this->relatedModelParams));
+                $fields[] = sprintf('(`%s` = %s)', $key, YPFModelBase::getFieldSQLRepresentation($index, $newInstance->__get($index), $this->relatedModelParams));
 
-            $sql = sprintf('DELETE FROM %s WHERE %s', $this->joinerTable, implode(' AND ', $fields));
+            $sql = sprintf('DELETE FROM `%s` WHERE %s', $this->joinerTable, implode(' AND ', $fields));
             $model::getDB()->command($sql);
 
             $fields = array();
@@ -111,7 +111,7 @@
                 $values[] = YPFModelBase::getFieldSQLRepresentation($index, $newInstance->__get($index), $this->relatedModelParams);
             }
 
-            $sql = sprintf('INSERT INTO %s (%s) VALUES(%s)', $this->joinerTable, implode(', ', $fields), implode(', ', $values));
+            $sql = sprintf('INSERT INTO `%s` (%s) VALUES(%s)', $this->joinerTable, implode(', ', $fields), implode(', ', $values));
             return $model::getDB()->command($sql);
         }
     }

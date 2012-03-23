@@ -13,6 +13,8 @@
 
         protected $cache = array();
 
+        protected $tableAlias;
+
         public static function getFor($relatorModelName, $relationName, $relationParams) {
             if (isset($relationParams['belongs_to']))
                 return new YPFBelongsToRelation($relatorModelName, $relationName, $relationParams);
