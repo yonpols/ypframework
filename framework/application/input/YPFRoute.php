@@ -135,6 +135,15 @@
         public function path($params = array()) {
             if (is_object($params))
                 $params = array('id' => $params);
+            elseif (!is_array($params))
+                $params = array();
+
+            $params = array_map(function($item) {
+                if (is_object($item))
+                    return ($item instanceof YPFModelBase)? $item->getSerializedKey(): $item->__toString();
+                else
+                    return $item;
+            }, $params);
 
             $path = $this->match;
             $usedparams = array();
@@ -143,15 +152,13 @@
             while (preg_match('/(:|\\$)[a-zA-Z][a-zA-Z0-9_]*/', $path, $matches, PREG_OFFSET_CAPTURE, $start))
             {
                 $key = substr($matches[0][0], 1);
-                if (!is_array($params) || !array_key_exists($key, $params))
-                {
+                if (!array_key_exists($key, $params)) {
                     $start = $matches[0][1]+strlen($matches[0][0]);
                     continue;
                 }
                 $usedparams[] = $key;
-                $replace = is_object($params[$key])? (($params[$key] instanceof YPFModelBase)? $params[$key]->getSerializedKey(): $params[$key]->__toString()): $params[$key];
-                if ($replace === null)
-                {
+                $replace = $params[$key];
+                if ($replace === null) {
                     $start = $matches[0][1]+strlen($matches[0][0]);
                     continue;
                 }
@@ -184,16 +191,10 @@
 
             $path = str_replace(array('(', ')'), '', $path);
 
-            if (count($params))
-            {
-/*                $query = array();
-                foreach ($params as $k=>$v)
-                {
-                    $replace = is_object($v)? (($v instanceof YPFModelBase)? $v->getSerializedKey(): $v->__toString()): $v;
-                    $query[] = sprintf('%s=%s', urlencode ($k), urlencode ($replace));
-                }*/
-
-                $path .= '?'.http_build_query($params);
+            if (count($params)) {
+                $query = http_build_query($params);
+                if ($query)
+                    $path .= '?'.$query;
             }
 
             if ($path[0] == '/')
