@@ -136,11 +136,11 @@
             $this->application->forwardTo(array('controller' => $data[0], 'action' => $data[1]), $params);
         }
 
-        protected function error($message) {
+        protected function error($message = null) {
             $this->output->error = $message;
         }
 
-        protected function notice($message) {
+        protected function notice($message = null) {
             $this->output->notice = $message;
         }
     }
