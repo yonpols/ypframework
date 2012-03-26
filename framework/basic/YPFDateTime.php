@@ -104,11 +104,11 @@
 
         public function __toString() {
             if ($this->dbtype == 'date')
-                return $this->format ('d/m/Y');
+                return $this->format (self::$local_date_format);
             elseif ($this->dbtype == 'time')
-                return $this->format ('H:i:s');
+                return $this->format (self::$local_short_time_format);
             else
-                return $this->format ('d/m/Y H:i:s');
+                return $this->format (self::$local_short_date_time_format);
         }
 
         public function __toDBValue() {
