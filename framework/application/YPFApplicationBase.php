@@ -105,9 +105,7 @@
          */
         public function forwardTo($action, $params = array()) {
             $this->actions[] = $action;
-
-            foreach ($params as $k=>$v)
-                if ($v !== null) $this->params[$k] = $v;
+            $this->request->mergeParameters($params, true);
 
             throw new JumpToNextActionException();
         }
@@ -129,7 +127,9 @@
                 return $sum;
             }
             else {
-                return mail($to, $subject, $text, implode("\r\n", $params));
+                if (is_array($params))
+                    $params = implode("\r\n", $params);
+                return mail($to, $subject, $text, $params);
             }
         }
 
