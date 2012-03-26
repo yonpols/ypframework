@@ -94,7 +94,7 @@ EOF;
 
     function php_error_catcher($errno, $errstr, $errfile = null, $errline = null) {
         $error = error_reporting() & $errno;
-        if ($errno != $error)
+        if (YPFramework::inProduction() && ($errno != $error))
             return;
 
         if (class_exists('Logger')) {
