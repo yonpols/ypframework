@@ -124,6 +124,54 @@
         return $html;
     }
 
+    function form_multipleselect($name, $values, $object = '', $attrs = array())
+    {
+        $value = null;
+        $id = _form_fieldname($name, $object, $value);
+
+        $html = sprintf('<select id="%s" name="%s" multiple="multiple"', $id['id'], $id['name']);
+
+        if (is_object($object) && ($object instanceof Model) && $object->getError($id['field']))
+            $attrs['class'] = (isset($attrs['class'])? $attrs['class'].' ': '').'error';
+
+        if (is_array($attrs))
+        foreach ($attrs as $k=>$v)
+            $html .= sprintf(' %s="%s"', $k, htmlentities($v, ENT_QUOTES, 'utf-8'));
+
+        $html .= '>';
+
+        foreach ($values as $k=>$v)
+        {
+            if (is_object($v) && ($v instanceof Model))
+            {
+                $key = $v->getSerializedKey();
+
+                $html .= sprintf('<option value="%s"', htmlentities($key, ENT_QUOTES, 'utf-8'));
+
+                if ($value instanceof YPFModelBaseRelation && ($value->has($key)))
+                    $html .= ' selected="selected"';
+                elseif (is_array($value) && (array_search($key, $value) !== false))
+                    $html .= ' selected="selected"';
+            } else {
+                $html .= sprintf('<option value="%s"', htmlentities($k, ENT_QUOTES, 'utf-8'));
+
+                if ($value instanceof YPFModelBaseRelation && ($value->has($k)))
+                    $html .= ' selected="selected"';
+                elseif (is_array($value) && (array_search($k, $value) !== false))
+                    $html .= ' selected="selected"';
+            }
+            $html .= sprintf('>%s</option>', htmlentities($v, ENT_QUOTES, 'utf-8'));
+        }
+
+        $html .= '</select>';
+
+        if (is_object($object) && ($object instanceof Model) && $object->getError($id['field']))
+            $html .= sprintf('<div class="error"><ul><li>%s</li></ul></div>',
+                implode('</li><li>', $object->getError($id['field'])));
+
+        return $html;
+    }
+
     function form_textarea($name, $object = '', $attrs = array())
     {
         $value = null;
