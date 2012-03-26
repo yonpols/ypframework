@@ -65,6 +65,49 @@
                 $this->iterationQuery = null;
         }
 
+        public function includeInQuery(YPFModelQuery $query) {
+            if ($this->tableAlias) {
+                $joinedTableName = sprintf('`%s` AS `%s`', $this->relatedModelParams->tableName, $this->tableAlias);
+                $joinedAliasPrefix = $this->tableAlias;
+            } elseif ($this->relatedModelParams->tableAlias) {
+                $joinedTableName = sprintf('`%s` AS `%s`', $this->relatedModelParams->tableName, $this->relatedModelParams->tableAlias);
+                $joinedAliasPrefix = $this->relatedModelParams->tableAlias;
+            } else {
+                $joinedTableName = sprintf('`%s`', $this->relatedModelParams->tableName);
+                $joinedAliasPrefix = $this->relatedModelParams->tableName;
+            }
+
+            if ($this->relatorModelParams->tableAlias)
+                $joiningAliasPrefix = $this->relatorModelParams->tableAlias;
+            else
+                $joiningAliasPrefix = $this->relatorModelParams->tableName;
+
+            $joinConditions = array();
+            foreach($this->relationParams['relatorKeys'] as $index=>$key)
+                    $joinConditions[] = sprintf('`%s`.`%s` = `%s`.`%s`',
+                                                    $joiningAliasPrefix, $index,
+                                                    $this->joinerTable, $key);
+            $query = $query->join($this->joinerTable, $joinConditions);
+
+            $joinConditions = array();
+            foreach($this->relationParams['relatedKeys'] as $index=>$key)
+                    $joinConditions[] = sprintf('`%s`.`%s` = `%s`.`%s`',
+                                                    $joinedAliasPrefix, $index,
+                                                    $this->joinerTable, $key);
+            $query = $query->join($joinedTableName, $joinConditions);
+
+            if (isset($this->relationParams['sqlConditions']))
+                $query = $query->where(arraize(isset($this->relationParams['sqlConditions'])));
+
+            if (isset($this->relationParams['sqlGrouping']))
+                $query = $query->groupBy(arraize(isset($this->relationParams['sqlGrouping'])));
+
+            if (isset($this->relationParams['sqlOrdering']))
+                $query = $query->orderBy(arraize(isset($this->relationParams['sqlOrdering'])));
+
+            return $query;
+        }
+
         public  function save() {
             if ($this->acceptsNested && is_array($this->iterationQuery)) {
                 $result = true;

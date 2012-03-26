@@ -44,6 +44,8 @@
 
         public abstract function set($relatorModel, $value);
 
+        public abstract function includeInQuery(YPFModelQuery $query);
+
         public function getRelationName() {
             return $this->relationName;
         }

@@ -8,7 +8,7 @@
         protected $modelName;
         protected $modelParams;
         protected $tableName;
-        protected $aliasName = '';
+        protected $tableAlias = '';
 
         protected $sqlFields = array();
         protected $sqlJoins = array();
@@ -16,7 +16,9 @@
         protected $sqlGrouping = array();
         protected $sqlGroupContions = array();
         protected $sqlOrdering = array();
-        protected $sqlLimit = array();
+        protected $sqlLimit = null;
+
+        protected $includedRelations = array();
 
         protected $conditionsJoiner = ' AND ';
 
@@ -36,7 +38,7 @@
             $this->modelParams = Model::getModelParams($modelName);
 
             $this->tableName = $this->modelParams->tableName;
-            $this->aliasName = $this->modelParams->aliasName;
+            $this->tableAlias = $this->modelParams->tableAlias;
             $this->sqlFields = $this->modelParams->sqlFields;
             $this->sqlConditions = $this->modelParams->sqlConditions;
             $this->sqlGrouping = $this->modelParams->sqlGrouping;
@@ -50,8 +52,8 @@
                 self::$modelCaches[$modelName] = array();
         }
 
-        public function getAliasName() {
-            return $this->aliasName;
+        public function getTableAlias() {
+            return $this->tableAlias;
         }
 
         public function getSqlFields() {
@@ -90,6 +92,10 @@
             return $this->modelParams;
         }
 
+        public function getIncludedRelations() {
+            return $this->includedRelations;
+        }
+
         public function useOr() {
             $this->conditionsJoiner = ' OR ';
         }
@@ -104,7 +110,21 @@
         }
 
         public function count() {
-            return $this->database->value($this->sql('COUNT(*)'));
+            $prevLimit = $this->sqlLimit;
+            $this->sqlLimit = null;
+            $count = $this->database->value($this->sql('COUNT(*)'));
+            $this->sqlLimit = $prevLimit;
+
+            if ($prevLimit) {
+                if (is_string($prevLimit))
+                    $prevLimit = explode(',', $prevLimit);
+
+                $count = $count - $prevLimit[0];
+                if (isset($prevLimit[1]))
+                    $count = min($count, $prevLimit[1]);
+            }
+
+            return $count;
         }
 
         public function sum($expression) {
@@ -191,18 +211,49 @@
             return $query;
         }
 
-        public function join($table, $conditions) {
-            if (is_string($conditions))
-                $conditions = array($conditions);
+        public function join($tableOrRelation, $conditions = null) {
+            if ($conditions === null) {
+                if (array_key_exists($tableOrRelation, $this->includedRelations) === false) {
+                    $modelParams = null;
 
-            $query = $this->copy();
-            $query->sqlJoins[] = sprintf(' JOIN `%s` ON %s', $table, implode(' AND ', $conditions));
+                    if (isset($this->modelParams->relations[$tableOrRelation]))
+                        $modelParams = $this->modelParams;
+                    else
+                        foreach ($this->includedRelations as $name => $params)
+                            if (isset($params->relations[$tableOrRelation])) {
+                                $modelParams = $params;
+                                break;
+                            }
+                    if (!$modelParams)
+                        throw new ErrorDataModel($this->modelName, sprintf('Couldn\'t find relation "%s"', $tableOrRelation));
+
+                    $relation = YPFModelBaseRelation::getFor($modelParams->modelName, $tableOrRelation, $modelParams->relations[$tableOrRelation]);
+
+                    if (!$relation)
+                        throw new ErrorDataModel($this->modelName, sprintf('Couldn\'t load relation "%s"', $tableOrRelation));
+
+                    $query = $relation->includeInQuery($this);
+                    $query->includedRelations[$tableOrRelation] = $modelParams;
+                    unset($relation);
+                } else
+                    throw new ErrorDataModel($this->modelName, sprintf('Relation "%s" already jonied in query', $tableOrRelation));
+            } else {
+                $query = $this->copy();
+                if (is_string($conditions))
+                    $conditions = array($conditions);
+
+                if (preg_match('/^`.+`$/', $tableOrRelation))
+                    $query->sqlJoins[] = sprintf(' JOIN %s ON %s', $tableOrRelation, implode(' AND ', $conditions));
+                else
+                    $query->sqlJoins[] = sprintf(' JOIN `%s` ON %s', $tableOrRelation, implode(' AND ', $conditions));
+            }
+
             return $query;
         }
 
         public function alias($alias) {
             $query = $this->copy();
-            $query->aliasName = $alias;
+            $query->tableAlias = $alias;
             return $query;
         }
 
@@ -371,8 +422,8 @@
 
         public function sql($fields = null, $delete = false) {
             $table = '`'.$this->tableName.'`';
-            if ($this->aliasName != '')
-                $table = sprintf('`%s` AS `%s`', $table, $this->aliasName);
+            if ($this->tableAlias != '')
+                $table = sprintf('`%s` AS `%s`', $table, $this->tableAlias);
 
 
             if (!$delete) {

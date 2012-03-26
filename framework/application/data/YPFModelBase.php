@@ -73,7 +73,7 @@
                 $str_key = $id;
 
             $id = Model::decodeKey($id, $modelParams);
-            $aliasPrefix = ($modelParams->aliasName!='')? $modelParams->aliasName: $modelParams->tableName;
+            $aliasPrefix = ($modelParams->tableAlias!='')? $modelParams->tableAlias: $modelParams->tableName;
 
             //Preparar condiciones
             $conditions = $modelParams->sqlConditions;
@@ -245,7 +245,7 @@
 
         public final function getError($field) {
             if (isset($this->_modelErrors[$field]))
-                return $this->_modelErrors[$field];
+                return arraize($this->_modelErrors[$field]);
             else
                 return null;
         }
@@ -833,8 +833,8 @@
 
             if (is_string($withAlias) && (strlen($withAlias) > 0))
                 $aliasPrefix = $withAlias;
-            elseif($this->_modelParams->aliasName != '')
-                $aliasPrefix = $this->_modelParams->aliasName;
+            elseif($this->_modelParams->tableAlias != '')
+                $aliasPrefix = $this->_modelParams->tableAlias;
             else
                 $aliasPrefix = $this->_modelParams->tableName;
 
@@ -1011,58 +1011,71 @@
                 throw new BaseError ('Couldn\'t get a database connection', 'DB');
 
             if (YPFModelBase::$modelParams === null)
-                YPFModelBase::$modelParams = new YPFObject();
+                YPFModelBase::$modelParams = new YPFObject;
 
             if (isset(YPFModelBase::$modelParams->{$model}))
                 return;
 
-            $settings = get_class_vars($model);
-            $params = new YPFObject();
-            $params->modelName =        $model;
+            $params = YPFCache::timeBased(sprintf('models.%s.metaData', $model), 2592000);
 
-            if (isset($settings['_schema']))
-            {
-                $params->tableName = $settings['_schema']['name'];
-                $params->keyFields = array();
+            if (!$params) {
+                $settings = get_class_vars($model);
+                $params = new YPFObject();
+                $params->modelName =        $model;
 
-                foreach ($settings['_schema']['columns'] as $column)
-                    if ($column['type'] == 'key')
-                        $params->keyFields[] = $column['name'];
+                if (isset($settings['_schema'])) {
+                    $params->tableName = $settings['_schema']['name'];
+                    $params->keyFields = array();
+
+                    foreach ($settings['_schema']['columns'] as $column)
+                        if ($column['type'] == 'key')
+                            $params->keyFields[] = $column['name'];
+
+                    if (empty($params->keyFields))
+                        $params->keyFields = array_map (function($i){ return $i['name']; }, $settings['_schema']['columns']);
+                } else {
+                    $params->tableName =    (isset($settings['_tableName'])? $settings['_tableName']: YPFramework::underscore($model));
+                    $params->keyFields =    (isset($settings['_keyFields'])? arraize($settings['_keyFields']): array());
+                }
+
+                $params->tableAlias =       (isset($settings['_tableAlias'])? $settings['_tableAlias']: null);
+                $params->transientFields =  (isset($settings['_transientFields'])? $settings['_transientFields']: array());
+                $params->tableCharset =     (isset($settings['_tableCharset'])? strtolower($settings['_tableCharset']): 'utf-8');
+
+                $params->sqlFields =        (isset($settings['_sqlFields'])? $settings['_sqlFields']: array());
+                $params->sqlJoins =         (isset($settings['_sqlJoins'])? $settings['_sqlJoins']: array());
+                $params->sqlConditions =    (isset($settings['_sqlConditions'])? $settings['_sqlConditions']: array());
+                $params->sqlGrouping =      (isset($settings['_sqlGrouping'])? $settings['_sqlGrouping']: array());
+                $params->sqlGroupConditions = (isset($settings['_sqlGroupConditions'])? $settings['_sqlGroupConditions']: array());
+                $params->sqlOrdering =      (isset($settings['_sqlOrdering'])? $settings['_sqlOrdering']: array());
+                $params->sqlLimit =         (isset($settings['_sqlLimit'])? $settings['_sqlLimit']: null);
+                $params->customQueries =    (isset($settings['_queries'])? $settings['_queries']: array());
+
+                $params->relations =        (isset($settings['_relations'])? $settings['_relations']: array());
+
+                $params->validations =      (isset($settings['_validations'])? $settings['_validations']: array());
+                foreach ($params->validations as $k=>$field)
+                    foreach ($field as $i=>$validation)
+                        if (!is_array($validation))
+                            $params->validations[$k][$i] = array('value' => $validation);
+
+                $params->relationObjects =  new YPFObject();
+                $params->tableMetaData = $model::$_database->getTableFields($params->tableName);
+
+                if (!$params->tableMetaData)
+                    throw new ErrorDataModel ($model, sprintf('Couldn\'t load table \'%s\' metadata', $params->tableName));
+
+                if (empty($params->keyFields)) {
+                    foreach($params->tableMetaData as $column)
+                        if ($column->Key)
+                            $params->keyFields[] = $column->Name;
+                }
 
                 if (empty($params->keyFields))
-                    $params->keyFields = array_map (function($i){ return $i['name']; }, $settings['_schema']['columns']);
-            } else
-            {
-                $params->tableName =        (isset($settings['_tableName'])? $settings['_tableName']: YPFramework::underscore($model));
-                $params->keyFields =        (isset($settings['_keyFields'])? arraize($settings['_keyFields']): array('id'));
+                    $params->keyFields[] = 'id';
+
+                YPFCache::timeBased(sprintf('models.%s.metaData', $model), 2592000, $params);
             }
-
-            $params->aliasName =        (isset($settings['_aliasName'])? $settings['_aliasName']: null);
-            $params->transientFields =  (isset($settings['_transientFields'])? $settings['_transientFields']: array());
-            $params->tableCharset =     (isset($settings['_tableCharset'])? strtolower($settings['_tableCharset']): 'utf-8');
-
-            $params->sqlFields =        (isset($settings['_sqlFields'])? $settings['_sqlFields']: array());
-            $params->sqlJoins =         (isset($settings['_sqlJoins'])? $settings['_sqlJoins']: array());
-            $params->sqlConditions =    (isset($settings['_sqlConditions'])? $settings['_sqlConditions']: array());
-            $params->sqlGrouping =      (isset($settings['_sqlGrouping'])? $settings['_sqlGrouping']: array());
-            $params->sqlGroupConditions = (isset($settings['_sqlGroupConditions'])? $settings['_sqlGroupConditions']: array());
-            $params->sqlOrdering =      (isset($settings['_sqlOrdering'])? $settings['_sqlOrdering']: array());
-            $params->sqlLimit =         (isset($settings['_sqlLimit'])? $settings['_sqlLimit']: null);
-            $params->customQueries =    (isset($settings['_queries'])? $settings['_queries']: array());
-
-            $params->relations =        (isset($settings['_relations'])? $settings['_relations']: array());
-
-            $params->validations =      (isset($settings['_validations'])? $settings['_validations']: array());
-            foreach ($params->validations as $k=>$field)
-                foreach ($field as $i=>$validation)
-                    if (!is_array($validation))
-                        $params->validations[$k][$i] = array('value' => $validation);
-
-            $params->relationObjects =  new YPFObject();
-            $params->tableMetaData = $model::$_database->getTableFields($params->tableName);
-
-            if (!$params->tableMetaData)
-                throw new ErrorDataModel ($model, sprintf('Couldn\'t load table \'%s\' metadata', $params->tableName));
 
             YPFModelBase::$modelParams->{$model} = $params;
             $params->modelQuery = new YPFModelQuery($model::$_database, $model);

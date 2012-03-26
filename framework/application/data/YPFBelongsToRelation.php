@@ -56,5 +56,32 @@
                 foreach($this->relationParams['keys'] as $index=>$key)
                     $relatorModel->{$key} = $value->{$this->relatedModelParams->keyFields[$index]};
         }
+
+        public function includeInQuery(YPFModelQuery $query) {
+            if ($this->tableAlias) {
+                $joinedTableName = sprintf('`%s` AS `%s`', $this->relatedModelParams->tableName, $this->tableAlias);
+                $joinedAliasPrefix = $this->tableAlias;
+            } elseif ($this->relatedModelParams->tableAlias) {
+                $joinedTableName = sprintf('`%s` AS `%s`', $this->relatedModelParams->tableName, $this->relatedModelParams->tableAlias);
+                $joinedAliasPrefix = $this->relatedModelParams->tableAlias;
+            } else {
+                $joinedTableName = sprintf('`%s`', $this->relatedModelParams->tableName);
+                $joinedAliasPrefix = $this->relatedModelParams->tableName;
+            }
+
+            if ($this->relatorModelParams->tableAlias)
+                $joiningAliasPrefix = $this->relatorModelParams->tableAlias;
+            else
+                $joiningAliasPrefix = $this->relatorModelParams->tableName;
+
+            $joinConditions = array();
+
+            foreach($this->relationParams['keys'] as $index=>$key)
+                $joinConditions[] = sprintf('`%s`.`%s` = `%s`.`%s`',
+                                                $joiningAliasPrefix, $key,
+                                                $joinedAliasPrefix, $this->relatedModelParams->keyFields[$index]);
+
+            return $query->join($joinedTableName, $joinConditions);
+        }
     }
 ?>
