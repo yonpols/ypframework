@@ -20,19 +20,21 @@
             $path = YPFramework::getFileName(YPFramework::getPaths()->tmp, 'sessions');
 
             if (!is_dir($path))
-                mkdir($path);
+                mkdir($path, 0777, true);
 
             if (isset($_COOKIE['YPFSESSION'])) {
                 $this->session_id = basename ($_COOKIE['YPFSESSION']);
                 $this->filename = YPFramework::getFileName ($path, $this->session_id);
-                $this->data = unserialize(file_get_contents($this->filename));
-            } else {
-                $this->session_id = sha1(time().$_SERVER['REMOTE_ADDR']);
-
-                $this->filename = YPFramework::getFileName ($path, $this->session_id);
-                $this->data = new stdClass();
-                $this->is_new = true;
+                if (file_exists($this->filename)) {
+                    $this->data = unserialize(file_get_contents($this->filename));
+                    return;
+                }
             }
+
+            $this->session_id = sha1(time().$_SERVER['REMOTE_ADDR']);
+            $this->filename = YPFramework::getFileName ($path, $this->session_id);
+            $this->data = new stdClass();
+            $this->is_new = true;
         }
 
         public function __destruct() {
