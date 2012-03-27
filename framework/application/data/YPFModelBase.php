@@ -10,7 +10,6 @@
         private static $modelParams = null;
 
         protected static $_databaseName = 'main';
-        protected static $_database;
 
         protected $_modelData = array();
         protected $_modelFieldModified = array();
@@ -36,19 +35,18 @@
         public static function install() {
             $model = get_called_class();
 
-            if ($model::$_database === null)
-                $model::$_database = YPFramework::getDatabase();
+            $database = $model::getDB();
 
             $settings = get_class_vars($model);
 
             if (isset($settings['_schema']))
-                $model::$_database->install($settings['_schema']);
+                $database->install($settings['_schema']);
         }
 
         public static function getDB() {
             $modelName = get_called_class();
-            $modelParams = Model::getModelParams($modelName);
-            return $modelName::$_database;
+            $modelParams = self::getModelParams($modelName);
+            return $modelParams->database;
         }
 
         public static function find($id, $instance = null, $rawId = false) {
@@ -92,20 +90,20 @@
 
         public static function transaction($code) {
             $model = get_called_class();
-            YPFModelBase::getModelParams($model);
+            $database = YPFModelBase::getModelParams($model)->database;
 
-            if ($model::$_database->inTransaction()) {
+            if ($database->inTransaction()) {
                 return $code();
             } else {
                 try {
-                    $model::$_database->begin();
+                    $database->begin();
                     if ($code()) {
-                        $model::$_database->commit();
+                        $database->commit();
                         return true;
                     } else
-                        $model::$_database->rollback();
+                        $database->rollback();
                 } catch (Exception $e) {
-                    $model::$_database->rollback();
+                    $database->rollback();
                 }
                 return false;
             }
@@ -260,19 +258,20 @@
 
         public function save() {
             $model = $this->_modelName;
+            $database = $this->_modelParams->database;
 
-            if ($model::$_database->inTransaction()) {
+            if ($database->inTransaction()) {
                 return $this->realSave();
             } else {
                 try {
-                    $model::$_database->begin();
+                    $database->begin();
                     if ($this->realSave()) {
-                        $model::$_database->commit();
+                        $database->commit();
                         return true;
                     } else
-                        $model::$_database->rollback();
+                        $database->rollback();
                 } catch (Exception $e) {
-                    $model::$_database->rollback();
+                    $database->rollback();
                 }
                 return false;
             }
@@ -280,19 +279,20 @@
 
         public function delete() {
             $model = $this->_modelName;
+            $database = $this->_modelParams->database;
 
-            if ($model::$_database->inTransaction()) {
+            if ($database->inTransaction()) {
                 return $this->realDelete();
             } else {
                 try {
-                    $model::$_database->begin();
+                    $database->begin();
                     if ($this->realDelete()) {
-                        $model::$_database->commit();
+                        $database->commit();
                         return true;
                     } else
-                        $model::$_database->rollback();
+                        $database->rollback();
                 } catch (Exception $e) {
-                    $model::$_database->rollback();
+                    $database->rollback();
                 }
                 return false;
             }
@@ -423,6 +423,7 @@
             else
                 $type = $modelParams->tableMetaData[$field]->Type;
 
+
             if ($value === null)
                 return 'NULL';
 
@@ -447,8 +448,8 @@
                 case 'datetime':
                     if ($value === '')
                         return 'NULL';
-                    $model = $modelParams->modelName;
-                    if ($rawData) return sprintf("'%s'", $model::$_database->sqlEscaped($value));
+
+                    if ($rawData) return sprintf("'%s'", $modelParams->database->sqlEscaped($value));
                     return sprintf("'%s'", $value->__toDBValue());
 
                 case 'varchar':
@@ -456,11 +457,10 @@
                 case 'text':
                 case 'string':
                 default:
-                    $model = $modelParams->modelName;
                     if ($modelParams->tableCharset != 'utf-8' && !$rawData)
-                        return sprintf("'%s'", $model::$_database->sqlEscaped(iconv('utf-8', $modelParams->tableCharset, $value)));
+                        return sprintf("'%s'", $modelParams->database->sqlEscaped(iconv('utf-8', $modelParams->tableCharset, $value)));
                     else
-                        return sprintf("'%s'", $model::$_database->sqlEscaped($value));
+                        return sprintf("'%s'", $modelParams->database->sqlEscaped($value));
             }
         }
 
@@ -703,7 +703,7 @@
                 $sql = sprintf("INSERT INTO `%s` (`%s`) VALUES(%s)", $this->_modelParams->tableName,
                     implode('`, `', $fieldNames), implode(', ', $fieldValues));
 
-                $result = $model::$_database->command($sql);
+                $result = $database = $this->_modelParams->database->command($sql);
 
                 if (is_int($result) && (count($this->_modelParams->keyFields)==1))
                 {
@@ -745,19 +745,17 @@
                 $sql = sprintf("UPDATE `%s` SET %s WHERE %s", $this->_modelParams->tableName,
                     implode(', ', $fieldAssigns), implode(' AND ', $this->getSqlIdConditions(false)));
 
-                $result = $model::$_database->command($sql);
+                $result = $this->_modelParams->database->command($sql);
 
                 if (!$result)
                     return false;
 
                 foreach($model::after('update') as $function)
-                    if (is_callable (array($this, $function)))
-                    {
+                    if (is_callable (array($this, $function))) {
                         if (call_user_func(array($this, $function)) === false)
                             $result = false;
-                    }
-                    else
-                        $model::$_database->rollback();
+                    } else
+                        $this->_modelParams->database->rollback();
             }
 
             if ($result === false)
@@ -772,7 +770,7 @@
                     if ($relation instanceof YPFHasManyRelation) {
                         $relation = $relation->get($this);
                         if (!$relation->save()) {
-                            $model::$_database->rollback();
+                            $this->_modelParams->database->rollback();
                             return false;
                         }
                     }
@@ -814,7 +812,7 @@
             $sql = sprintf("DELETE FROM `%s` WHERE %s",
                 $this->_modelParams->tableName, implode(' AND ', $this->getSqlIdConditions(false)));
 
-            $result = $model::$_database->command($sql);
+            $result = $this->_modelParams->database->command($sql);
 
             foreach($model::after('delete') as $function)
                 if (is_callable (array($this, $function)))
@@ -1001,14 +999,8 @@
 
         //Initializable implementation
         //======================================================================
-        public static final function loadMetadata() {
+        public static final function loadMetadata($ignoreCache = false) {
             $model = get_called_class();
-
-            if ($model::$_database === null)
-                $model::$_database = YPFramework::getDatabase($model::$_databaseName);
-
-            if (!$model::$_database)
-                throw new BaseError ('Couldn\'t get a database connection', 'DB');
 
             if (YPFModelBase::$modelParams === null)
                 YPFModelBase::$modelParams = new YPFObject;
@@ -1016,12 +1008,16 @@
             if (isset(YPFModelBase::$modelParams->{$model}))
                 return;
 
-            $params = YPFCache::timeBased(sprintf('models.%s.metaData', $model), 2592000);
+            if ($ignoreCache)
+                $params = null;
+            else
+                $params = YPFCache::timeBased(sprintf('models.%s.metaData', $model), 2592000);
 
             if (!$params) {
                 $settings = get_class_vars($model);
                 $params = new YPFObject();
                 $params->modelName =        $model;
+                $params->databaseName =     (isset($settings['_databaseName'])? $settings['_databaseName']: 'main');
 
                 if (isset($settings['_schema'])) {
                     $params->tableName = $settings['_schema']['name'];
@@ -1060,7 +1056,8 @@
                             $params->validations[$k][$i] = array('value' => $validation);
 
                 $params->relationObjects =  new YPFObject();
-                $params->tableMetaData = $model::$_database->getTableFields($params->tableName);
+                $params->database = YPFramework::getDatabase($params->databaseName);
+                $params->tableMetaData = $params->database->getTableFields($params->tableName);
 
                 if (!$params->tableMetaData)
                     throw new ErrorDataModel ($model, sprintf('Couldn\'t load table \'%s\' metadata', $params->tableName));
@@ -1075,10 +1072,11 @@
                     $params->keyFields[] = 'id';
 
                 YPFCache::timeBased(sprintf('models.%s.metaData', $model), 2592000, $params);
-            }
+            } else
+                $params->database = YPFramework::getDatabase($params->databaseName);
 
             YPFModelBase::$modelParams->{$model} = $params;
-            $params->modelQuery = new YPFModelQuery($model::$_database, $model);
+            $params->modelQuery = new YPFModelQuery($params->database, $model);
         }
     }
 ?>

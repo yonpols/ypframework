@@ -65,7 +65,7 @@
             if (is_array($this->iterationQuery))
                 return array_search ($instance, $this->iterationQuery);
             else
-                return ($this->tiedModelQuery->where($instance->getSqlIdConditions($this->tiedModelQuery->getTableName()))->count() > 0);
+                return ($this->tiedModelQuery->where($instance->getSqlIdConditions($this->tiedModelQuery->getTableAlias()))->count() > 0);
         }
 
         public function set($relatorModel, $value)

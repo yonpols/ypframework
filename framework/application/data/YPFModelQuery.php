@@ -362,8 +362,18 @@
                 return sprintf("%.F", $value);
             elseif (is_int($value))
                 return sprintf("%d", $value);
-            elseif (is_object($value)) {
-                if ($value instanceof Model)
+            elseif (is_array ($value)) {
+                $values = array();
+                foreach ($value as $item)
+                    $values[] = $this->getSqlRepresentation ($item);
+                return sprintf('(%s)', implode(', ', $values));
+            } elseif (is_object($value)) {
+                if ($value instanceof YPFModelQuery) {
+                    $values = array();
+                    foreach ($value as $item)
+                        $values[] = $this->getSqlRepresentation ($item);
+                    return sprintf('(%s)', implode(', ', $values));
+                } elseif ($value instanceof Model)
                     return sprintf("'%s'", $this->database->sqlEscaped($value->getSerializedKey()));
                 elseif ($value instanceof YPFDateTime)
                     return sprintf("'%s'", $this->database->sqlEscaped($value->__toDBValue()));
