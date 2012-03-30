@@ -1,0 +1,24 @@
+development:
+  #application is a mandatory section
+  application:
+    title: '{{application_human_name}}'
+    root: '/home'
+
+    #enable / disable caching of config files and other resources
+    #cache: false
+    #log:
+    #  active: true
+    #  exclude: []
+
+  #If you need your application to connect to databases you must set at least one connection
+  #currently YPFramework accepts MySQL and SQLite databases.
+  #Each connection must have a name and "main" is mandatory and will be the default database used.
+  databases:
+    main:
+      type: SQLite2
+      name: '{%paths.db}/development.db'
+
+  #plugin_name:
+  #  setting_1: value
+
+  $include: '../routes.yml'

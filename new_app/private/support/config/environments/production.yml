@@ -1,0 +1,13 @@
+#Environments can inherit settings from other envirnonments when you append a colon :
+#and the name of a previous environment. In this case 'production' environment
+#inherits settings from 'development' environment.
+production:development:
+  application:
+    cache: true
+    log:
+      active: true
+      exclude: [SQL, DEBUG]
+
+  databases:
+    main:
+      name: '{%paths.db}/production.db'

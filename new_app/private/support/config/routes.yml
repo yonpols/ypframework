@@ -1,0 +1,8 @@
+#Routes are entry points to your application. Any request sent to the server that is not a
+#file under www path nor a route defined here, will be rejected.
+routes:
+  home: {match: '/home(.:format)', controller: 'home', action: 'index', method: 'get'}
+
+  #If you want to reach to all your controllers and its actions without control, you
+  #can enable this route which catches all urls in the form /controller/action/id
+  #default: {match: '/(:controller(/:action(/:id)))(.:format)', method: [get, post, delete, put]}
