@@ -1056,8 +1056,8 @@
                             $params->validations[$k][$i] = array('value' => $validation);
 
                 $params->relationObjects =  new YPFObject();
-                $params->database = YPFramework::getDatabase($params->databaseName);
-                $params->tableMetaData = $params->database->getTableFields($params->tableName);
+                $database = YPFramework::getDatabase($params->databaseName);
+                $params->tableMetaData = $database->getTableFields($params->tableName);
 
                 if (!$params->tableMetaData)
                     throw new ErrorDataModel ($model, sprintf('Couldn\'t load table \'%s\' metadata', $params->tableName));
@@ -1072,6 +1072,7 @@
                     $params->keyFields[] = 'id';
 
                 YPFCache::timeBased(sprintf('models.%s.metaData', $model), 2592000, $params);
+                $params->database = $database;
             } else
                 $params->database = YPFramework::getDatabase($params->databaseName);
 

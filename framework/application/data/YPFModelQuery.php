@@ -18,6 +18,8 @@
         protected $sqlOrdering = array();
         protected $sqlLimit = null;
 
+        protected $rawValues = null;
+
         protected $includedRelations = array();
 
         protected $conditionsJoiner = ' AND ';
@@ -98,6 +100,12 @@
 
         public function useOr() {
             $this->conditionsJoiner = ' OR ';
+        }
+
+        public function raw($associative = false) {
+            $query = $this->copy();
+            $query->rawValues = $associative;
+            return $query;
         }
 
         public function fields($fields) {
@@ -336,9 +344,17 @@
             if ($row == false)
                 return null;
 
+            if ($this->rawValues !== null) {
+                if ($this->rawValues)
+                    return $row;
+                elseif (count($row) > 1)
+                    return array_values ($row);
+                else
+                    return array_shift ($row);
+            }
+
             $key = array();
-            foreach ($this->modelParams->keyFields as $k)
-            {
+            foreach ($this->modelParams->keyFields as $k) {
                 $v = $row[$k];
                 $key[] = Model::encodeKey($v);
             }

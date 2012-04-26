@@ -98,6 +98,27 @@
             $this->setTimezone($date->getTimezone());
         }
 
+        public function join(YPFDateTime $time) {
+            switch ($this->dbtype) {
+                case 'date':
+                    if ($time->getType() != 'date') {
+                        $date = $this->format('Y-m-d');
+                        $time = $time->format('H:i:s');
+                        return self::createFromDB('datetime', "$date $time");
+                    }
+                    return false;
+                case 'time':
+                    if ($time->getType() != 'time') {
+                        $date = $time->format('Y-m-d');
+                        $time = $this->format('H:i:s');
+                        return self::createFromDB('datetime', "$date $time");
+                    }
+                    return false;
+                case 'datetime':
+                    return false;
+            }
+        }
+
         public function getType() {
             return $this->dbtype;
         }
