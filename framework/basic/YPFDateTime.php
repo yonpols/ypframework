@@ -22,7 +22,8 @@
                 return null;
 
             $instance = new YPFDateTime;
-            $instance->setTimestamp($date->getTimestamp());
+            $instance->setDate($date->format('Y'), $date->format('m'), $date->format('d'));
+            $instance->setTime($date->format('H'), $date->format('i'), $date->format('s'));
             $instance->setTimezone($date->getTimezone());
 
             $instance->dbtype = $type;
@@ -49,7 +50,8 @@
                 return null;
 
             $instance = new YPFDateTime;
-            $instance->setTimestamp($date->getTimestamp());
+            $instance->setDate($date->format('Y'), $date->format('m'), $date->format('d'));
+            $instance->setTime($date->format('H'), $date->format('i'), $date->format('s'));
             $instance->setTimezone($date->getTimezone());
 
             $instance->dbtype = $type;
@@ -94,7 +96,8 @@
 
         public function set($value) {
             $date = YPFDateTime::createFromLocal($this->dbtype, $value);
-            $this->setTimestamp($date->getTimestamp());
+            $this->setDate($date->format('Y'), $date->format('m'), $date->format('d'));
+            $this->setTime($date->format('H'), $date->format('i'), $date->format('s'));
             $this->setTimezone($date->getTimezone());
         }
 
