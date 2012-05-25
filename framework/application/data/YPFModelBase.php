@@ -932,7 +932,7 @@
             return $modelParams->modelQuery->last();
         }
 
-        public static function join($table, $conditions) {
+        public static function join($table, $conditions = null) {
             $modelParams = Model::getModelParams(get_called_class());
             return $modelParams->modelQuery->join($table, $conditions);
         }
