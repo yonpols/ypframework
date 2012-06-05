@@ -127,7 +127,7 @@
 
             if (($templateFiles === false) || (count($templateFiles) == 0))
                 throw new ErrorComponentNotFound ('TEMPLATE', $viewName);
-            elseif (count($templateFiles) > 1)
+            elseif (count($templateFiles) > 1 && YPFramework::inDevelopment())
                 throw new ErrorMultipleViewsFound ($viewName);
 
             if ($contentType == '*/*')
