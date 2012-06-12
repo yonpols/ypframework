@@ -129,7 +129,7 @@
         $value = null;
         $id = _form_fieldname($name, $object, $value);
 
-        $html = sprintf('<select id="%s" name="%s" multiple="multiple"', $id['id'], $id['name']);
+        $html = sprintf('<select id="%s" name="%s[]" multiple="multiple"', $id['id'], $id['name']);
 
         if (is_object($object) && ($object instanceof Model) && $object->getError($id['field']))
             $attrs['class'] = (isset($attrs['class'])? $attrs['class'].' ': '').'error';
