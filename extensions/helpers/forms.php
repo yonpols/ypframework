@@ -100,19 +100,21 @@
             $html .= '></option>';
         }
 
-        foreach ($values as $k=>$v)
-        {
-            if (is_object($v) && ($v instanceof Model))
+        if (is_array($values) || $values instanceof Iterator) {
+            foreach ($values as $k=>$v)
             {
-                $key = $v->getSerializedKey();
+                if (is_object($v) && ($v instanceof Model))
+                {
+                    $key = $v->getSerializedKey();
 
-                $html .= sprintf('<option value="%s"', htmlentities($key, ENT_QUOTES, 'utf-8'));
-                if ($key == $value) $html .= ' selected="selected"';
-            } else {
-                $html .= sprintf('<option value="%s"', htmlentities($k, ENT_QUOTES, 'utf-8'));
-                if ((string)$k == $value) $html .= ' selected="selected"';
+                    $html .= sprintf('<option value="%s"', htmlentities($key, ENT_QUOTES, 'utf-8'));
+                    if ($key == $value) $html .= ' selected="selected"';
+                } else {
+                    $html .= sprintf('<option value="%s"', htmlentities($k, ENT_QUOTES, 'utf-8'));
+                    if ((string)$k == $value) $html .= ' selected="selected"';
+                }
+                $html .= sprintf('>%s</option>', htmlentities($v, ENT_QUOTES, 'utf-8'));
             }
-            $html .= sprintf('>%s</option>', htmlentities($v, ENT_QUOTES, 'utf-8'));
         }
 
         $html .= '</select>';

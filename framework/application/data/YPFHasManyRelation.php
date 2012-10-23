@@ -302,6 +302,10 @@
             return $this->tiedModelQuery->alias($alias);
         }
 
+        public function getModelParams() {
+            return $this->tiedModelQuery->getModelParams();
+        }
+
         // ----------- Iterator Implementation --------------------------------
         public function current()
         {

@@ -83,22 +83,39 @@
             if (defined('YPF_CMD'))
                 return false;
 
-            $cache_file = YPFramework::getFileName(self::$fileBased, md5($fileName.$sub_section)."-".basename($fileName));
+            $cache_file = md5($fileName.$sub_section)."-".basename($fileName);
 
-            if ($value !== null)
-            {
-                if ($serialize) $value = serialize($value);
-                file_put_contents($cache_file, $value);
-                Logger::framework('INFO:CACHE', "$fileName loaded to cache: $cache_file");
+            if (function_exists('apc_store')) {
+                $cache_mod = $cache_file.'-modification';
+                if ($value !== null) {
+                    apc_store($cache_file, $value);
+                    apc_store($cache_mod, time());
+                    Logger::framework('INFO:CACHE', "$fileName loaded to cache: $cache_file");
+                } else {
+                    $date = apc_fetch($cache_mod);
+                    if (filemtime($fileName) > $date)
+                        return false;
+                    else
+                        return apc_fetch ($cache_file);
+                }
             } else {
-                if (!is_file($cache_file))
-                    return false;
-                elseif (filemtime($fileName) > filemtime($cache_file))
-                    return false;
-                elseif ($serialize)
-                    return unserialize (file_get_contents($cache_file));
-                else
-                    return file_get_contents($cache_file);
+                $cache_file = YPFramework::getFileName(self::$fileBased, $cache_file);
+
+                if ($value !== null)
+                {
+                    if ($serialize) $value = serialize($value);
+                    file_put_contents($cache_file, $value);
+                    Logger::framework('INFO:CACHE', "$fileName loaded to cache: $cache_file");
+                } else {
+                    if (!is_file($cache_file))
+                        return false;
+                    elseif (filemtime($fileName) > filemtime($cache_file))
+                        return false;
+                    elseif ($serialize)
+                        return unserialize (file_get_contents($cache_file));
+                    else
+                        return file_get_contents($cache_file);
+                }
             }
         }
 
@@ -119,22 +136,33 @@
             if (defined('YPF_CMD'))
                 return false;
 
-            $cache_file = YPFramework::getFileName(self::$fileBased, md5($name)."-".  YPFramework::normalize($name));
+            $cache_file = md5($name)."-".basename($name);
 
-            if ($value !== null)
-            {
-                if ($serialize) $value = serialize($value);
-                file_put_contents($cache_file, $value);
-                Logger::framework('INFO:CACHE', "$name loaded to cache: $cache_file");
+            if (function_exists('apc_store')) {
+                if ($value !== null) {
+                    apc_store($cache_file, $value, $duration);
+                    Logger::framework('INFO:CACHE', "$name loaded to cache: $cache_file");
+                } else {
+                    return apc_fetch ($cache_file);
+                }
             } else {
-                if (!is_file($cache_file))
-                    return false;
-                elseif ( (time()-filemtime($cache_file)) > $duration )
-                    return false;
-                elseif ($serialize)
-                    return unserialize (file_get_contents($cache_file));
-                else
-                    return file_get_contents($cache_file);
+                $cache_file = YPFramework::getFileName(self::$timeBased, $cache_file);
+
+                if ($value !== null)
+                {
+                    if ($serialize) $value = serialize($value);
+                    file_put_contents($cache_file, $value);
+                    Logger::framework('INFO:CACHE', "$name loaded to cache: $cache_file");
+                } else {
+                    if (!is_file($cache_file))
+                        return false;
+                    elseif ( (time()-filemtime($cache_file)) > $duration )
+                        return false;
+                    elseif ($serialize)
+                        return unserialize (file_get_contents($cache_file));
+                    else
+                        return file_get_contents($cache_file);
+                }
             }
         }
     }

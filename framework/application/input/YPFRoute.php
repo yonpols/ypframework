@@ -305,6 +305,9 @@
         private function __construct($urlBase) {
             self::$router = $this;
 
+            if (substr($urlBase, -1) == '/')
+                $urlBase = substr($urlBase, 0, -1);
+
             foreach(YPFramework::getSetting('routes') as $name => $data)
                 $this->registerRoute ($name, YPFRoute::get($name, $data, $urlBase));
         }

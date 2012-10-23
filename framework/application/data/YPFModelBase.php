@@ -932,7 +932,7 @@
             return $modelParams->modelQuery->last();
         }
 
-        public static function join($table, $conditions) {
+        public static function join($table, $conditions = null) {
             $modelParams = Model::getModelParams(get_called_class());
             return $modelParams->modelQuery->join($table, $conditions);
         }
@@ -1056,8 +1056,8 @@
                             $params->validations[$k][$i] = array('value' => $validation);
 
                 $params->relationObjects =  new YPFObject();
-                $params->database = YPFramework::getDatabase($params->databaseName);
-                $params->tableMetaData = $params->database->getTableFields($params->tableName);
+                $database = YPFramework::getDatabase($params->databaseName);
+                $params->tableMetaData = $database->getTableFields($params->tableName);
 
                 if (!$params->tableMetaData)
                     throw new ErrorDataModel ($model, sprintf('Couldn\'t load table \'%s\' metadata', $params->tableName));
@@ -1072,6 +1072,7 @@
                     $params->keyFields[] = 'id';
 
                 YPFCache::timeBased(sprintf('models.%s.metaData', $model), 2592000, $params);
+                $params->database = $database;
             } else
                 $params->database = YPFramework::getDatabase($params->databaseName);
 

@@ -13,6 +13,11 @@
     }
 
     function to_js($js) {
-        return str_replace("\n", "\\n", addslashes($js));
+        $js = str_replace("\\", "\\\\", $js);
+        $js = str_replace('"', '\\"', $js);
+        $js = str_replace("\n", '\\n', $js);
+        return '"'.$js.'"';
     }
+
+
 ?>

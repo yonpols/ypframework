@@ -21,7 +21,7 @@
             //Process request
             $this->request = YPFRequest::get();
 
-            $url = $this->request->getBaseUrl();
+            $url = YPFramework::getSetting('application.url', $this->request->getBaseUrl());
             YPFramework::setSetting('application.url', $url);
 
             $this->routes = YPFRouter::get($url);
@@ -119,14 +119,12 @@
          * @return mixed returns true or false or the amount of mails sent
          */
         public function sendEmail($to, $subject, $text, $params = null) {
-            if (is_array($to))
-            {
+            if (is_array($to)) {
                 $sum = 0;
-                foreach ($to as $mail)
+                foreach ($to as $email)
                     $sum += ($this->sendEmail ($email, $subject, $text, $params))? 1: 0;
                 return $sum;
-            }
-            else {
+            } else {
                 if (is_array($params))
                     $params = implode("\r\n", $params);
                 return mail($to, $subject, $text, $params);

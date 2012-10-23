@@ -26,6 +26,7 @@
                 $this->session_id = basename ($_COOKIE['YPFSESSION']);
                 $this->filename = YPFramework::getFileName ($path, $this->session_id);
                 if (file_exists($this->filename)) {
+                    Logger::framework('DEBUG:SESSION', sprintf('Session read from %s', $this->filename));
                     $this->data = unserialize(file_get_contents($this->filename));
                     return;
                 }
@@ -42,12 +43,13 @@
         }
 
         public function write() {
+            Logger::framework('DEBUG:SESSION', sprintf('Session saved in %s', $this->filename));
             file_put_contents($this->filename, serialize($this->data));
         }
 
         public function setCookie() {
             if ($this->is_new)
-                setcookie('YPFSESSION', $this->session_id, time()+24*3600);
+                setcookie('YPFSESSION', $this->session_id, time()+24*3600, '/');
         }
 
         public function __get($name) {
