@@ -21,7 +21,7 @@
             //Process request
             $this->request = YPFRequest::get();
 
-            $url = $this->request->getBaseUrl();
+            $url = YPFramework::getSetting('application.url', $this->request->getBaseUrl());
             YPFramework::setSetting('application.url', $url);
 
             $this->routes = YPFRouter::get($url);
