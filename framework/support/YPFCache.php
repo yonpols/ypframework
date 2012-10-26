@@ -18,6 +18,9 @@
 
             if (!is_dir(self::$fileBased))
                 mkdir (self::$fileBased, 0775, true);
+
+            if (!is_dir(self::$timeBased))
+                mkdir (self::$timeBased, 0775, true);
         }
 
         public static function finalize() { }
